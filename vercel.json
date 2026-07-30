@@ -1,0 +1,22 @@
+{
+  "functions": {
+    "api/gemma-decision.js": {
+      "maxDuration": 30
+    },
+    "api/gemma-report.js": {
+      "maxDuration": 30
+    },
+    "api/gemma-chat.js": {
+      "maxDuration": 30
+    },
+    "api/geocode.js": {
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,384 @@
+@import 'leaflet/dist/leaflet.css';
+
+:root {
+  /* Soft Off-White Light Mode Palette (NO Pure Whites #FFFFFF, NO Pure Blacks #000000) */
+  --bg-main: #f3f3f5;
+  --bg-card: #fafafc;
+  --bg-card-hover: #ececed;
+  --bg-elevated: #e5e5e8;
+  --text-primary: #1f1f23;
+  --text-secondary: #52525b;
+  --text-muted: #8e8e9a;
+  --status-green: #16a34a;
+  --status-amber: #d97706;
+  --status-red: #dc2626;
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  /* Lock the page — keyboard must not scroll the document */
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+.app-container {
+  max-width: 440px;
+  margin: 0 auto;
+  /* Fill exactly the visual viewport — dvh shrinks when keyboard opens */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-main);
+  position: relative;
+  /* top-header=60px, bottom-nav=72px */
+  padding-bottom: 72px;
+  padding-top: 60px;
+  overflow: hidden;
+}
+
+/* Fixed Header — No Borders, Pure Background Blur Difference */
+.top-header {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 440px;
+  height: 60px;
+  background: rgba(243, 243, 245, 0.90);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  z-index: 100;
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.status-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+}
+
+.btn-test-pill {
+  border: none;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: background 0.2s ease;
+}
+
+.btn-test-pill:hover {
+  background: var(--bg-card-hover);
+}
+
+/* Fixed Bottom Navigation — No Borders, Background Color Difference */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 440px;
+  height: 72px;
+  background: rgba(243, 243, 245, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 0.5rem;
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.4rem 1rem;
+  border-radius: 12px;
+  transition: color 0.2s ease;
+}
+
+.nav-item.active {
+  color: var(--text-primary);
+}
+
+.nav-item.active svg {
+  fill: var(--text-primary);
+  stroke: var(--text-primary);
+}
+
+/* Main Content Area — this is the only scrollable region for non-chat views */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1.25rem;
+}
+
+/* Card System — NO BORDERS AT ALL, Pure Background Difference */
+.card-flat {
+  background: var(--bg-card);
+  border: none;
+  border-radius: 20px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.2s ease;
+}
+
+.card-flat:hover {
+  background-color: var(--bg-card-hover);
+}
+
+/* Micro Category Labels */
+.micro-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Typography */
+.headline-lg {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.headline-md {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.body-sm {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* 3-Column Mini Status Grid — NO BORDERS */
+.grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.mini-card {
+  background: var(--bg-card);
+  border: none;
+  border-radius: 16px;
+  padding: 0.85rem 0.65rem;
+  text-align: center;
+}
+
+.mini-card .val {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 0.15rem;
+}
+
+.mini-card .sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Buttons — NO BORDERS */
+.btn-primary-dark {
+  width: 100%;
+  background: var(--text-primary);
+  color: var(--bg-main);
+  border: none;
+  padding: 0.85rem 1.25rem;
+  border-radius: 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.btn-primary-dark:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary-dark {
+  width: 100%;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 16px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s ease;
+}
+
+.btn-secondary-dark:hover {
+  background: var(--bg-card-hover);
+}
+
+/* Badges — NO BORDERS */
+.badge-mono {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: none;
+}
+
+.badge-threat-high {
+  background: #fee2e2;
+  color: #991b1b;
+  border: none;
+}
+
+.badge-threat-medium {
+  background: #fef3c7;
+  color: #92400e;
+  border: none;
+}
+
+.badge-threat-low {
+  background: #dcfce7;
+  color: #166534;
+  border: none;
+}
+
+/* Leaflet Map Styling Override — NO BORDERS */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  background: #e5e5e8 !important;
+  z-index: 1;
+  border: none;
+}
+
+/* PIN Keypad Grid — NO BORDERS */
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  max-width: 280px;
+  margin: 1.5rem auto 0;
+}
+
+.pin-key {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.4rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pin-key:active {
+  background: var(--bg-card-hover);
+}
+
+.pin-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.pin-dot.filled {
+  background: var(--text-primary);
+}
