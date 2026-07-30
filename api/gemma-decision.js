@@ -214,17 +214,17 @@ Respond ONLY in valid JSON:
 `;
 
   if (!apiKey) {
-    const rms = sensor_summary.audio_features?.peak_rms || 0.4;
+    const rms = sensor_summary.audio_features?.peak_rms || 0.3;
     const accel = sensor_summary.accelerometer_peak || 0;
-    const vote = (rms > 0.35 || accel > 12.0) ? 1 : 0;
+    const vote = (rms > 0.18 || accel > 8.0) ? 1 : 0;
 
     return res.status(200).json({
       decision_response: {
         vote,
         decision: vote === 1 ? 'keep' : 'quit',
         confidence: 0.85,
-        reason: vote === 1 ? 'Local RMS/accel spike voted 1.' : 'Quiet ambient baseline voted 0.',
-        transcript: audioTranscript.transcript
+        reason: vote === 1 ? 'Acoustic RMS sound spike detected (Vote 1).' : 'Quiet background baseline (Vote 0).',
+        transcript: audioTranscript.transcript || 'Background ambient audio captured.'
       }
     });
   }

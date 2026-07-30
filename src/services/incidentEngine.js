@@ -19,6 +19,9 @@ import {
   getSegmentsForIncident,
   saveIncidentReport,
   discardTempTrialData,
+  createAuditLog,
+  updateAuditLog,
+  generateUniqueCaseName,
   db
 } from './db';
 import { captureAudioClip, extractFrameFeatures } from './audioEngine';
@@ -192,11 +195,29 @@ export async function triggerIncident(triggerType = 'audio') {
  * Stage 4: If KEEP -> Lock Vault Package & Record Extended Duration in 5-minute chunks.
  */
 async function runAcquisitionLoop(triggerType, initialGps) {
-  // A. Create Temporary Incident Record for trial tracking
+  // A. Create Temporary Incident Record & Permanent Audit Log Entry
   const tempIncident = await createIncident(triggerType, initialGps);
   activeIncident = tempIncident;
 
+  const caseName = generateUniqueCaseName(initialGps?.place, triggerType, tempIncident.rec_number);
+
+  // Update incident with unique case name
+  await db.incidents.update(tempIncident.id, { case_name: caseName }).catch(() => {});
+
+  const auditLog = await createAuditLog({
+    incident_id: tempIncident.id,
+    case_name: caseName,
+    trigger_type: triggerType,
+    location: initialGps ? `${initialGps.lat?.toFixed(4)}° N, ${initialGps.lng?.toFixed(4)}° E` : 'Keffi-Abuja Corridor',
+    status: 'evaluating',
+    polls: [],
+    transcripts: [],
+    movement_summary: {},
+    reason: 'Evaluating 90s continuous trial...'
+  });
+
   const polls = [];
+  const pollDetails = [];
   const trialSegments = [];
   const transcripts = [];
   let maxPeakAccel = 0;
@@ -228,7 +249,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
     const currentGps = getLatestGpsFix();
 
     if (motionData.mag > maxPeakAccel) maxPeakAccel = motionData.mag;
-    if ((audioFeatures.rms || 0.5) > maxPeakRms) maxPeakRms = audioFeatures.rms;
+    if ((audioFeatures.rms || 0.4) > maxPeakRms) maxPeakRms = audioFeatures.rms;
     if ((audioFeatures.band_2k_4k_energy || 0.2) > maxBandEnergy) maxBandEnergy = audioFeatures.band_2k_4k_energy;
 
     const sensorSnapshot = {
@@ -236,7 +257,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
       accelerometer_peak: motionData.mag,
       motion_pattern: motionData.isSpike ? 'irregular_jolt' : 'steady',
       audio_features: {
-        peak_rms: audioFeatures.rms || 0.50,
+        peak_rms: audioFeatures.rms || 0.40,
         band_2k_4k_energy: audioFeatures.band_2k_4k_energy || 0.20,
         dominant_frequency_hz: audioFeatures.dominant_frequency_hz || 2500,
         spectral_centroid: audioFeatures.spectral_centroid || 2200,
@@ -262,6 +283,9 @@ async function runAcquisitionLoop(triggerType, initialGps) {
     // Call Gemma for single 30s window vote
     setPhase('DECIDING');
     let pollVote = 0;
+    let windowTranscript = 'Background ambient audio captured.';
+    let windowReason = '';
+
     try {
       const decisionRes = await callGemmaDecision({
         isFinalAggregation: false,
@@ -271,30 +295,43 @@ async function runAcquisitionLoop(triggerType, initialGps) {
       });
 
       pollVote = decisionRes.vote ?? (decisionRes.decision === 'keep' ? 1 : 0);
-      if (decisionRes.transcript) transcripts.push(decisionRes.transcript);
+      if (decisionRes.transcript) {
+        windowTranscript = decisionRes.transcript;
+        transcripts.push(decisionRes.transcript);
+      }
+      windowReason = decisionRes.reason || '';
       await updateSegmentDecision(savedSegment.id, decisionRes);
     } catch (err) {
       console.warn(`Poll ${windowIdx} call error:`, err);
-      pollVote = (audioFeatures.rms > 0.35 || motionData.mag > 12.0) ? 1 : 0;
+      pollVote = (audioFeatures.rms > 0.18 || motionData.mag > 8.0) ? 1 : 0;
+      windowReason = pollVote === 1 ? 'Acoustic RMS sound spike detected.' : 'Quiet background baseline.';
     }
 
     polls.push(pollVote);
+    pollDetails.push({
+      window: windowIdx,
+      vote: pollVote,
+      transcript: windowTranscript,
+      rms: (audioFeatures.rms || 0.4).toFixed(2),
+      accel: motionData.mag,
+      reason: windowReason
+    });
+
     console.log(`[Trial Phase] Poll #${windowIdx} Vote: ${pollVote} (${polls.join(', ')})`);
 
-    // Accumulate ledger with entities/events from this poll window
+    // Update permanent audit log with progress
+    await updateAuditLog(auditLog.id, {
+      polls: pollDetails,
+      transcripts,
+      movement_summary: { peak_accel: maxPeakAccel, pattern: maxPeakAccel > 8 ? 'irregular_jolt' : 'steady' }
+    }).catch(() => {});
+
+    // Accumulate ledger
     const currentLedger = activeIncident.ledger || {};
     const updatedLedger = {
       ...currentLedger,
       collection_window: windowIdx,
       elapsed_seconds: windowIdx * 30,
-      known_entities: Array.from(new Set([
-        ...(currentLedger.known_entities || []),
-        ...(decisionRes?.updated_entities || [])
-      ])),
-      detected_events: Array.from(new Set([
-        ...(currentLedger.detected_events || []),
-        ...(decisionRes?.updated_events || [])
-      ])),
       gemma_call_count: (currentLedger.gemma_call_count || 0) + 1
     };
     activeIncident = await updateIncidentLedger(activeIncident.id, updatedLedger, 'collecting').catch(() => activeIncident);
@@ -305,6 +342,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
   // ─────────────────────────────────────────────────────────────
   setPhase('DECIDING');
   let finalDecision = 'keep';
+  let decisionReason = 'Threat confirmed by 3-poll evaluation & motion data.';
 
   try {
     const aggRes = await callGemmaDecision({
@@ -312,7 +350,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
       polls,
       movement_summary: {
         peak_accel: maxPeakAccel,
-        pattern: maxPeakAccel > 12 ? 'irregular_jolt' : 'steady'
+        pattern: maxPeakAccel > 8 ? 'irregular_jolt' : 'steady'
       },
       event_summary: {
         transcripts,
@@ -323,18 +361,26 @@ async function runAcquisitionLoop(triggerType, initialGps) {
     });
 
     finalDecision = aggRes.decision || 'keep';
+    if (aggRes.reason) decisionReason = aggRes.reason;
   } catch (err) {
     console.warn('Final aggregation decision threw; applying safety-first KEEP fallback:', err);
-    finalDecision = 'keep'; // Safety-first fallback
+    finalDecision = 'keep';
   }
 
   console.log(`[Final Aggregation Decision] Result: ${finalDecision.toUpperCase()} (Polls: [${polls.join(', ')}], Peak Accel: ${maxPeakAccel}m/s²)`);
 
   // ─────────────────────────────────────────────────────────────
-  // STAGE 3: IF QUIT -> PURGE TRIAL RECORDING (SAVE NOTHING TO VAULT)
+  // STAGE 3: IF QUIT -> PURGE TRIAL AUDIO BLOBS (AUDIT LOG STAYS PERMANENTLY!)
   // ─────────────────────────────────────────────────────────────
   if (finalDecision === 'quit' && !manualStopRequested) {
-    console.log('[Trial Outcome: QUIT] Discarding 90s trial recording. Saving NOTHING to Vault.');
+    console.log('[Trial Outcome: QUIT] Discarding 90s trial audio blobs. Audit log stays permanent.');
+
+    await updateAuditLog(auditLog.id, {
+      status: 'quit',
+      final_decision: 'QUIT',
+      reason: decisionReason || 'Sound returned to normal background baseline. No threat detected.'
+    });
+
     await discardTempTrialData(tempIncident.id);
     activeIncident = null;
     setPhase('IDLE');
@@ -345,6 +391,12 @@ async function runAcquisitionLoop(triggerType, initialGps) {
   // STAGE 4: IF KEEP -> LOCK VAULT PACKAGE & RECORD EXTENDED DURATION (5-MIN CHUNKS)
   // ─────────────────────────────────────────────────────────────
   console.log('[Trial Outcome: KEEP] Threat confirmed! Locking Vault Package & starting continuous 5-minute chunked recording.');
+
+  await updateAuditLog(auditLog.id, {
+    status: 'keep',
+    final_decision: 'KEEP',
+    reason: decisionReason || 'Threat confirmed by 3-poll evaluation & movement data.'
+  });
 
   const targetMins = parseInt(localStorage.getItem('amana_extended_duration_mins') || '30', 10);
   const targetMs = targetMins * 60 * 1000;

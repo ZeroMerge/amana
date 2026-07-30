@@ -382,3 +382,19 @@ body {
 .pin-dot.filled {
   background: var(--text-primary);
 }
+
+/* Apple Spring Ease-Out Popup Notification Animation */
+@keyframes toastSlideUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 32px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -4px) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}

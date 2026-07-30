@@ -12,7 +12,7 @@ import {
   MapPinIcon
 } from '@heroicons/react/24/solid';
 import { IncidentMap } from '../components/IncidentMap';
-import { getPermanentRecNumber, getSegmentsForIncident } from '../services/db';
+import { getPermanentRecNumber, getSegmentsForIncident, generateUniqueCaseName } from '../services/db';
 import { generateGemmaReportOnDemand } from '../services/incidentEngine';
 
 export function VaultView({
@@ -660,17 +660,17 @@ export function VaultView({
                       minHeight: '115px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
                     }}>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                          Recording #{permNum}
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {inc.case_name || generateUniqueCaseName(inc.gps_trail?.[0]?.place, inc.trigger_type, permNum)}
                         </div>
                         <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
                           {inc.gps_trail?.[0]
-                            ? `${inc.gps_trail[0].lat?.toFixed(3)}° N`
+                            ? `${inc.gps_trail[0].lat?.toFixed(3)}° N, ${inc.gps_trail[0].lng?.toFixed(3)}° E`
                             : 'Keffi-Abuja Corridor'}
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: '0.5rem' }}>
                         <span>{dateStr}</span>
                         <span>{typeof segCount === 'number' ? `${segCount * 15}s` : '30s'}</span>
                       </div>
@@ -688,6 +688,7 @@ export function VaultView({
                 const permNum = getPermanentRecNumber(inc, index, incidents.length);
                 const dateStr = new Date(inc.started_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const segCount = inc.ledger?.gemma_call_count || 2;
+                const caseTitle = inc.case_name || generateUniqueCaseName(inc.gps_trail?.[0]?.place, inc.trigger_type, permNum);
 
                 return (
                   <div
@@ -700,8 +701,7 @@ export function VaultView({
                     }}
                   >
                     <div style={{ fontSize: '0.825rem', color: 'var(--text-primary)' }}>
-                      • <strong style={{ fontWeight: 600 }}>Recording #{permNum}</strong> —{' '}
-                      {inc.gps_trail?.[0] ? `${inc.gps_trail[0].lat?.toFixed(3)}° N` : 'Keffi-Abuja'}
+                      • <strong style={{ fontWeight: 600 }}>{caseTitle}</strong>
                     </div>
                     <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                       {dateStr} • {segCount * 15}s

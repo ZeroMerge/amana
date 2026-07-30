@@ -23,6 +23,16 @@ db.version(3).stores({
   chat_messages: 'id, thread_id, sender, created_at'
 });
 
+// Version 4: Immutable Forensic Audit Trail Schema (Paper Trail for ALL decisions)
+db.version(4).stores({
+  packages: null,
+  incidents: 'id, rec_number, started_at, ended_at, status, trigger_type, disposition',
+  segments: 'id, incident_id, segment_number, recorded_at',
+  chat_threads: 'id, title, created_at, updated_at',
+  chat_messages: 'id, thread_id, sender, created_at',
+  audit_logs: 'id, incident_id, timestamp, status, trigger_type'
+});
+
 /**
  * Get permanent recording number for an incident
  */
@@ -223,6 +233,57 @@ export async function updateThreadTitle(threadId, newTitle) {
 
 export async function updateThreadTaggedIncidents(threadId, taggedIncidentIds) {
   await db.chat_threads.update(threadId, { tagged_incident_ids: taggedIncidentIds, updated_at: new Date().toISOString() });
+}
+
+/**
+ * UNIQUE CASE FILE NAMER
+ * Formats: "Keffi Highway — Loud Sound Spike (EV-8492)"
+ */
+export function generateUniqueCaseName(locationName, triggerType, recNumber) {
+  let shortLoc = 'Keffi';
+  if (locationName) {
+    shortLoc = locationName.split('-')[0].split(',')[0].trim();
+  }
+  const triggerLabel = triggerType === 'motion' ? 'Motion' : triggerType === 'safety_timer' ? 'Timer' : 'Sound';
+  const code = (recNumber || Math.floor(100 + Math.random() * 900)).toString();
+  return `${shortLoc} • ${triggerLabel} #${code}`;
+}
+
+/**
+ * FORENSIC AUDIT TRAIL (PAPER TRAIL) CRUD
+ * Immutable decision log that persists even if audio blobs are discarded on QUIT
+ */
+export async function createAuditLog(logData) {
+  const entry = {
+    id: logData.id || crypto.randomUUID(),
+    incident_id: logData.incident_id,
+    case_name: logData.case_name || 'Event Investigation',
+    timestamp: logData.timestamp || new Date().toISOString(),
+    trigger_type: logData.trigger_type || 'audio',
+    location: logData.location || 'Keffi-Abuja Corridor',
+    status: logData.status || 'evaluating', // 'evaluating' | 'keep' | 'quit'
+    polls: logData.polls || [], // [{ window: 1, vote: 1, transcript: '...', rms: 0.45 }]
+    transcripts: logData.transcripts || [],
+    movement_summary: logData.movement_summary || {},
+    final_decision: logData.final_decision || null,
+    reason: logData.reason || 'Evaluating 90s continuous trial...'
+  };
+
+  await db.audit_logs.put(entry);
+  return entry;
+}
+
+export async function updateAuditLog(logId, updates) {
+  await db.audit_logs.update(logId, updates);
+  return await db.audit_logs.get(logId);
+}
+
+export async function getAllAuditLogs() {
+  return await db.audit_logs.orderBy('timestamp').reverse().toArray();
+}
+
+export async function deleteAuditLog(logId) {
+  await db.audit_logs.delete(logId);
 }
 
 export async function deleteChatThread(threadId) {

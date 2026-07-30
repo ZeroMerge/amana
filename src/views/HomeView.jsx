@@ -5,7 +5,9 @@ import {
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/solid';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { IncidentMap } from '../components/IncidentMap';
+import { getAllAuditLogs } from '../services/db';
 
 export function HomeView({
   incidentCount = 0,
@@ -25,11 +27,7 @@ export function HomeView({
   const defaultLng = currentGps?.lng || 7.3195;
   const isRecording = enginePhase !== 'IDLE';
 
-  const sampleLogs = [
-    { time: 'Just now', title: 'System Check', desc: 'Mic & Motion active' },
-    { time: '14:20', title: 'Location Fixed', desc: 'Keffi-Abuja Corridor' },
-    { time: 'Yesterday', title: 'Recording Saved', desc: '1 saved recording in Vault' }
-  ];
+  const auditLogs = useLiveQuery(() => getAllAuditLogs(), []) || [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.25rem 0' }}>
@@ -278,43 +276,57 @@ export function HomeView({
           </div>
         )}
 
-        {/* Tab 2: Clean 1-Line History Rows with Ellipsis Truncation (...) */}
+        {/* Tab 2: Live Audit Log Paper Trail Rows */}
         {activeBottomTab === 'history' && (
           <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {sampleLogs.map((log, idx) => (
-                <div
-                  key={idx}
-                  onClick={onOpenLogModal}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingBottom: '0.65rem',
-                    borderBottom: idx < sampleLogs.length - 1 ? '1px solid var(--bg-elevated)' : 'none',
-                    cursor: 'pointer',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: 'var(--text-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '75%'
-                    }}
-                  >
-                    • <strong style={{ fontWeight: 600 }}>{log.title}</strong> — {log.desc}
-                  </div>
+            {auditLogs.length === 0 ? (
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '0.5rem 0' }}>
+                No paper trail records yet. Trigger a recording to log system actions.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {auditLogs.slice(0, 4).map((log, idx) => {
+                  const dateStr = new Date(log.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const isKeep = log.status === 'keep' || log.final_decision === 'KEEP';
 
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, marginLeft: '0.5rem' }}>
-                    {log.time}
-                  </span>
-                </div>
-              ))}
-            </div>
+                  return (
+                    <div
+                      key={log.id || idx}
+                      onClick={onOpenLogModal}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingBottom: '0.65rem',
+                        borderBottom: idx < Math.min(auditLogs.length, 4) - 1 ? '1px solid var(--bg-elevated)' : 'none',
+                        cursor: 'pointer',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '0.8rem',
+                          color: 'var(--text-primary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '75%'
+                        }}
+                      >
+                        • <strong style={{ fontWeight: 600 }}>{log.case_name || 'Event Investigation'}</strong> —{' '}
+                        <span style={{ color: isKeep ? '#166534' : 'var(--text-secondary)' }}>
+                          {isKeep ? 'KEEP' : 'QUIT'}
+                        </span>
+                      </div>
+
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, marginLeft: '0.5rem' }}>
+                        {dateStr}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div style={{ textAlign: 'right', marginTop: '0.85rem' }}>
               <button
