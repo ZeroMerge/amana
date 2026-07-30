@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   const { incident_id, started_at, ended_at, trigger_type, ledger = {}, gps_trail = [], segments = [] } = req.body || {};
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
-  const gemmaModel = process.env.GEMMA_MODEL || 'gemma-2-27b-it';
+  const gemmaModel = process.env.GEMMA_MODEL || 'gemma-4-31b-it';
 
   if (!apiKey) {
     console.log('No API key set on server environment. Returning fallback report.');

@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   } = req.body || {};
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
-  const gemmaModel = process.env.GEMMA_MODEL || 'gemma-2-27b-it';
+  const primaryModel = process.env.GEMMA_MODEL || 'gemma-4-31b-it';
 
   if (!apiKey) {
     console.log('[gemma-chat] No API key — returning local fallback reply.');
@@ -80,10 +80,10 @@ Required JSON Schema:
     }
   }
 
-  // Step 1: Try Primary Gemma Model (gemma-2-27b-it / gemma-4-31b-it)
+  // Step 1: Try Primary Model (gemini-2.0-flash / gemma-2-27b-it)
   try {
     const gemmaRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${gemmaModel}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${primaryModel}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,34 +107,10 @@ Required JSON Schema:
       }
     }
 
-    // Step 2: Retry with Gemma 2 (gemma-2-9b-it)
-    console.warn(`[gemma-chat] ${gemmaModel} failed (${gemmaRes.status}), retrying with gemma-2-9b-it`);
-    const gemma2Res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemma-2-9b-it:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: contentsParts }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.2,
-            maxOutputTokens: 512
-          }
-        })
-      }
-    );
-
-    if (gemma2Res.ok) {
-      const g2Data = await gemma2Res.json();
-      const rawG2Text = g2Data.candidates?.[0]?.content?.parts?.[0]?.text;
-      const g2Text = parseGemmaJsonResponse(rawG2Text);
-      if (g2Text) return res.status(200).json({ reply: g2Text });
-    }
-
-    // Step 3: Fallback to Gemini 2.0 Flash if Gemma endpoints are unavailable
+    // Step 2: Retry with gemini-1.5-flash if primary endpoint fails
+    console.warn(`[gemma-chat] ${primaryModel} failed (${gemmaRes.status}), retrying with gemini-1.5-flash`);
     const fallbackRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
