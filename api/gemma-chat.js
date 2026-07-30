@@ -18,15 +18,16 @@ export default async function handler(req, res) {
   const {
     query = '',
     tagged_context = [],
+    attachments = [],
     attachments_count = 0
   } = req.body || {};
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
-  const gemmaModel = process.env.GEMMA_MODEL || 'gemma-4-31b-it';
+  const primaryModel = process.env.GEMMA_MODEL || 'gemini-2.0-flash';
 
   if (!apiKey) {
     console.log('[gemma-chat] No API key — returning local fallback reply.');
-    return res.status(200).json({ reply: computeFallbackReply(query, tagged_context) });
+    return res.status(200).json({ reply: computeFallbackReply(query, tagged_context, attachments) });
   }
 
   // Build a rich contextual prompt from tagged recordings
@@ -42,14 +43,14 @@ Recording #${rec.recording_number}:
     : 'No specific recordings tagged in this message.';
 
   const systemPrompt = `You are Gemma, the AI assistant embedded in Amana — a personal safety and evidence preservation app in Nigeria.
-You help users understand their saved recordings, analyze incidents, and make sense of evidence.
+You help users understand their saved recordings, analyze incidents, examine photo attachments, and answer safety questions.
 
 Context Details:
 ${tagged_context.length > 0
   ? `Tagged Recordings Context:\n${contextBlock}`
-  : `No recordings tagged. Suggest the user tag a recording with / if they need analysis.`
+  : `No recordings tagged.`
 }
-${attachments_count > 0 ? `Attachments: ${attachments_count} image(s) attached.` : ''}
+${attachments.length > 0 ? `Attachments: ${attachments.length} image(s) attached.` : ''}
 
 User Query: "${query}"
 
@@ -62,15 +63,32 @@ Required JSON Schema:
   "reply": "Your clean response to the user in 1 to 3 simple sentences."
 }`;
 
-  // Step 1: Try Gemma 4 (gemma-4-31b-it)
+  // Build multimodal content parts
+  const contentsParts = [{ text: systemPrompt }];
+
+  // Add base64 image parts if present
+  if (Array.isArray(attachments)) {
+    for (const att of attachments) {
+      if (att.data_base64) {
+        contentsParts.push({
+          inlineData: {
+            mimeType: att.mime || 'image/jpeg',
+            data: att.data_base64.replace(/^data:image\/\w+;base64,/, '')
+          }
+        });
+      }
+    }
+  }
+
+  // Step 1: Try Primary Model (gemini-2.0-flash / gemma-2-27b-it)
   try {
     const gemmaRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${gemmaModel}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${primaryModel}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: systemPrompt }] }],
+          contents: [{ parts: contentsParts }],
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0.2,
@@ -89,15 +107,15 @@ Required JSON Schema:
       }
     }
 
-    // Step 2: Retry with Gemini 2.5 Flash if Gemma endpoint fails
-    console.warn(`[gemma-chat] ${gemmaModel} failed (${gemmaRes.status}), retrying with gemini-2.5-flash`);
+    // Step 2: Retry with gemini-1.5-flash if primary endpoint fails
+    console.warn(`[gemma-chat] ${primaryModel} failed (${gemmaRes.status}), retrying with gemini-1.5-flash`);
     const fallbackRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: systemPrompt }] }],
+          contents: [{ parts: contentsParts }],
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0.2,
@@ -114,10 +132,10 @@ Required JSON Schema:
       if (fbText) return res.status(200).json({ reply: fbText });
     }
 
-    return res.status(200).json({ reply: computeFallbackReply(query, tagged_context) });
+    return res.status(200).json({ reply: computeFallbackReply(query, tagged_context, attachments) });
   } catch (err) {
     console.error('[gemma-chat] Fetch error:', err);
-    return res.status(200).json({ reply: computeFallbackReply(query, tagged_context) });
+    return res.status(200).json({ reply: computeFallbackReply(query, tagged_context, attachments) });
   }
 }
 
@@ -153,13 +171,32 @@ function parseGemmaJsonResponse(rawText) {
 
 /**
  * Local deterministic fallback for when the API is unavailable.
- * Grade 5 vocabulary, based only on tagged context data.
+ * Grade 5 vocabulary, based on query intent & tagged context data.
  */
-function computeFallbackReply(query, tagged_context) {
-  const q = (query || '').toLowerCase();
+function computeFallbackReply(query, tagged_context, attachments = []) {
+  const q = (query || '').toLowerCase().trim();
+
+  // Image analysis questions
+  if (q.includes('image') || q.includes('photo') || q.includes('picture') || q.includes('camera')) {
+    if (attachments.length > 0) {
+      return `I see your uploaded photo attachment. I will inspect the image for visual details, location signs, and evidence.`;
+    }
+    return `Yes! I can analyze images. Tap the photo icon to upload a picture or tag a recording with an image attached.`;
+  }
+
+  // Common conversational queries
+  if (q.includes('hello') || q.includes('hi') || q.includes('hey') || q === 'gemma') {
+    return `Hello! I am Gemma, your personal safety assistant. Ask me anything or tag a recording with / to start analyzing.`;
+  }
+  if (q.includes('didn\'t answer') || q.includes('didnt answer') || q.includes('no answer') || q.includes('respond')) {
+    return `Apologies for the delay! I am right here. Ask me any question or tag a recording using / so I can help.`;
+  }
+  if (q.includes('who are you') || q.includes('what can you do') || q.includes('help')) {
+    return `I am Gemma, AI assistant for Amana. I help you understand your saved audio recordings, examine photo evidence, and answer incident questions.`;
+  }
 
   if (tagged_context.length === 0) {
-    return `I can help you understand your saved recordings. Type / to pick a recording to tag, then ask me your question.`;
+    return `I am ready to help! Ask me any question, attach a photo, or type / to tag a saved recording for analysis.`;
   }
 
   if (tagged_context.length === 1) {

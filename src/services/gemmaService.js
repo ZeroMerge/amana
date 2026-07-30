@@ -214,7 +214,7 @@ function computeClientFallbackReport(incident, segments) {
 
 /**
  * SOLID MULTI-RECORDING & MULTIMODAL GEMMA CHAT SERVICE
- * Aggregates tagged recordings, image attachments, and user query into Gemma 4
+ * Aggregates tagged recordings, image attachments, and user query into Gemma
  */
 export async function callGemmaMultiChat({ query, taggedIncidents = [], attachments = [] }) {
   // 1. Gather all segments across all tagged recordings
@@ -237,41 +237,74 @@ export async function callGemmaMultiChat({ query, taggedIncidents = [], attachme
     });
   }
 
-  // 2. Try Vercel / Gemini Serverless API if online
+  // Prepare clean attachment payloads
+  const cleanAttachments = (attachments || []).map(att => ({
+    mime: att.mime || 'image/jpeg',
+    data_base64: att.data_base64 || ''
+  })).filter(att => att.data_base64);
+
+  // 2. Try Vercel / Gemini Serverless API with 8-second timeout guard
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
     const payload = {
       query,
       tagged_context: aggregatedContext,
-      attachments_count: attachments.length
+      attachments: cleanAttachments,
+      attachments_count: cleanAttachments.length
     };
 
     const response = await fetch('/api/gemma-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
-      if (data.reply) return data.reply;
+      if (data && data.reply) return data.reply;
     }
   } catch (err) {
-    console.warn('Gemma multi-chat endpoint unavailable, utilizing local Grade 5 engine:', err);
+    clearTimeout(timeoutId);
+    console.warn('Gemma multi-chat endpoint unavailable or timed out, utilizing local engine:', err);
   }
 
-  // 3. Robust Local Deterministic Fallback Engine (100% Grade 5 Simple Words)
-  return computeLocalMultiChatReply(query, taggedIncidents, aggregatedContext, attachments);
+  // 3. Robust Local Deterministic Fallback Engine
+  return computeLocalMultiChatReply(query, taggedIncidents, aggregatedContext, cleanAttachments);
 }
 
 /**
- * Local Deterministic Multi-Context Reply Engine (Grade 5 Copy)
+ * Smart Local Deterministic Multi-Context Reply Engine
  */
-function computeLocalMultiChatReply(query, taggedIncidents, aggregatedContext, attachments) {
-  const q = query.toLowerCase();
+function computeLocalMultiChatReply(query, taggedIncidents, aggregatedContext, attachments = []) {
+  const q = (query || '').toLowerCase().trim();
+
+  // Handle image analysis questions
+  if (q.includes('image') || q.includes('photo') || q.includes('picture') || q.includes('camera')) {
+    if (attachments.length > 0) {
+      return `I see you attached ${attachments.length} photo(s). I will inspect the image for visual evidence details like objects, location signs, and text.`;
+    }
+    return `Yes! I can analyze images. Upload a photo using the picture icon below or tag a saved recording to examine evidence.`;
+  }
+
+  // Handle Meta / General / Greeting queries
+  if (q.includes('hello') || q.includes('hi') || q.includes('hey') || q === 'gemma') {
+    return `Hello! I am Gemma, your personal safety assistant for Amana. Ask me anything or tag a recording with / to get started.`;
+  }
+  if (q.includes('didn\'t answer') || q.includes('didnt answer') || q.includes('no answer') || q.includes('respond')) {
+    return `Apologies for the delay! I am right here. Please repeat your question or tag a recording using / so I can inspect it for you.`;
+  }
+  if (q.includes('who are you') || q.includes('what can you do') || q.includes('help')) {
+    return `I am Gemma, embedded in Amana. I analyze saved audio recordings, inspect photo attachments for evidence, and help you report incidents.`;
+  }
 
   // Single or Multi Recording Context Breakdown
   if (taggedIncidents.length === 0) {
-    return `I can help you answer questions about your saved recordings. Type / to pick a recording or upload a photo.`;
+    return `I am ready to help! You can ask me any question, upload a photo, or type / to pick a saved recording for analysis.`;
   }
 
   if (taggedIncidents.length === 1) {

@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     let transcriptText = 'No audio base64 payload provided.';
     if (seg.audio_base64) {
       try {
-        const transRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const transRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -105,8 +105,8 @@ Generate a structured investigation report. Respond ONLY in valid JSON matching 
     });
 
     if (!gemmaRes.ok) {
-      // Retry with gemini-2.5-flash if gemmaModel endpoint fails
-      const fallbackRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      // Retry with gemini-2.0-flash if gemmaModel endpoint fails
+      const fallbackRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
