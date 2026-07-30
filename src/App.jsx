@@ -19,7 +19,7 @@ import {
 } from './services/audioEngine';
 import { startMotionMonitoring, stopMotionMonitoring } from './services/motionEngine';
 import { db, deleteIncident, clearAllIncidents } from './services/db';
-import { triggerIncident, subscribeEngineState, checkDeadManVaultRelease, checkPendingGemmaReports, requestManualStop } from './services/incidentEngine';
+import { triggerIncident, subscribeEngineState, checkDeadManVaultRelease, checkPendingGemmaReports } from './services/incidentEngine';
 import { getCurrentGpsFix, startGpsTracking, stopGpsTracking } from './services/gpsService';
 
 export function App() {
@@ -157,11 +157,6 @@ export function App() {
     setActiveTab('chat');
   };
 
-  const handleStopRecording = () => {
-    requestManualStop();
-    setToastMessage('Recording session stopped');
-  };
-
   return (
     <div className="app-container">
       {hasCompletedOnboarding && (
@@ -172,7 +167,6 @@ export function App() {
           sensorStates={sensorStates}
           onToggleSensor={handleToggleSensor}
           onManualTrigger={() => triggerIncident('combined')}
-          onStopRecording={handleStopRecording}
         />
       )}
 
@@ -183,15 +177,12 @@ export function App() {
           <HomeView
             incidentCount={incidents.length}
             currentGps={currentGps}
-            enginePhase={enginePhase}
-            activeIncident={activeIncident}
             onOpenVault={() => setActiveTab('vault')}
             onOpenSafetyTimer={() => setIsTimerModalOpen(true)}
             onOpenChat={() => setActiveTab('chat')}
             onOpenSettings={() => setActiveTab('settings')}
             onOpenMapModal={() => setIsMapModalOpen(true)}
             onOpenLogModal={() => setIsLogModalOpen(true)}
-            onStopRecording={handleStopRecording}
           />
         ) : activeTab === 'vault' ? (
           <VaultView
