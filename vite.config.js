@@ -28,12 +28,12 @@ export default defineConfig({
             type: 'image/png'
           },
           {
-            src: 'amana_main_logo.png',
+            src: 'amana_favicon.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'amana_main_logo.png',
+            src: 'amana_favicon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

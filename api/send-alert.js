@@ -35,9 +35,14 @@ export default async function handler(req, res) {
   }
 
   const recNum = incident?.rec_number || '1';
-  const mapLink = location && location.latitude && location.longitude
-    ? `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
-    : 'https://www.google.com/maps?q=8.8471,7.8736';
+  const lat = location?.lat || location?.latitude;
+  const lng = location?.lng || location?.longitude;
+  const mapLink = (lat && lng)
+    ? `https://www.google.com/maps?q=${lat},${lng}`
+    : 'https://www.google.com/maps';
+  const locationText = (lat && lng)
+    ? `${parseFloat(lat).toFixed(4)}° N, ${parseFloat(lng).toFixed(4)}° E`
+    : 'Recorded Location';
 
   let alertTitle = 'EMERGENCY ALERT — Amana Safety Incident';
   if (isTest) {
@@ -82,7 +87,7 @@ export default async function handler(req, res) {
                   <div style="font-weight: 700; font-size: 14px; color: #1f1f23; margin-bottom: 6px;">Package Breakdown</div>
                   <div style="font-size: 13px; color: #52525b; margin-bottom: 4px;">• Recording: #${recNum}</div>
                   <div style="font-size: 13px; color: #52525b; margin-bottom: 4px;">• Status: Cryptographic SHA-256 Hash Verified</div>
-                  <div style="font-size: 13px; color: #52525b; margin-bottom: 12px;">• Location: Keffi Corridor, Nasarawa</div>
+                  <div style="font-size: 13px; color: #52525b; margin-bottom: 12px;">• Location: ${locationText}</div>
                   <a href="${mapLink}" style="display: inline-block; background: #1f1f23; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 13px;">View Location on Map</a>
                 </div>
 

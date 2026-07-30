@@ -260,7 +260,7 @@ export async function createAuditLog(logData) {
     case_name: logData.case_name || 'Event Investigation',
     timestamp: logData.timestamp || new Date().toISOString(),
     trigger_type: logData.trigger_type || 'audio',
-    location: logData.location || 'Keffi-Abuja Corridor',
+    location: logData.location || 'Recorded Location',
     status: logData.status || 'evaluating', // 'evaluating' | 'keep' | 'quit'
     polls: logData.polls || [], // [{ window: 1, vote: 1, transcript: '...', rms: 0.45 }]
     transcripts: logData.transcripts || [],

@@ -148,7 +148,7 @@ function computeServerFallbackReport(ledger, segments) {
       time: new Date(s.recorded_at || Date.now()).toLocaleTimeString(),
       event: `Segment #${s.segment_number || idx + 1} captured (Hash: ${s.local_hash ? s.local_hash.slice(0, 8) : 'N/A'})`
     })),
-    entities: ledger.known_entities || ['Nasarawa Region'],
+    entities: ledger.known_entities || ['Recorded Location'],
     events: ledger.detected_events || ['Acoustic spike trigger'],
     investigation_leads: ledger.investigation_leads || ['Review raw WebM audio clips'],
     evidence_integrity: 0.92,
