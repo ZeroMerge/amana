@@ -149,29 +149,32 @@ export function ActivityLogModal({ isOpen, onClose }) {
                       {log.polls?.length > 0 && (
                         <div>
                           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                            3-POLL WINDOW EVALUATIONS (90s TRIAL)
+                            3-POLL WINDOW EVALUATIONS (45s TRIAL — 15s EACH)
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                             {log.polls.map((p, pIdx) => (
                               <div
                                 key={pIdx}
                                 style={{
                                   background: 'var(--bg-card)',
-                                  padding: '0.5rem 0.65rem',
-                                  borderRadius: '8px',
-                                  fontSize: '0.75rem'
+                                  padding: '0.55rem 0.75rem',
+                                  borderRadius: '10px',
+                                  fontSize: '0.75rem',
+                                  border: '1px solid var(--bg-elevated)'
                                 }}
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                                   <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                    Poll #{p.window || pIdx + 1}
+                                    Poll #{p.window || pIdx + 1} (15s Clip)
                                   </span>
                                   <span style={{ fontWeight: 700, color: p.vote === 1 ? '#166534' : '#991b1b' }}>
-                                    Vote: {p.vote === 1 ? '1 (Keep)' : '0 (Quit)'}
+                                    Vote: {p.vote === 1 ? '1 (KEEP)' : '0 (QUIT)'}
                                   </span>
                                 </div>
-                                <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                  "{p.transcript || 'Background ambient sound'}"
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                                  🗣️ <span style={{ fontStyle: 'italic', color: p.transcript ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                    "{p.transcript || 'Ambient sound baseline captured.'}"
+                                  </span>
                                 </div>
                               </div>
                             ))}

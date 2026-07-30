@@ -132,10 +132,10 @@ Respond ONLY in valid JSON matching this exact format:
   }
 
   // ─────────────────────────────────────────────────────────────
-  // MODE B: SINGLE 30-SECOND WINDOW POLL VOTE (vote: 1 | 0)
+  // MODE B: SINGLE 15-SECOND WINDOW POLL VOTE (vote: 1 | 0)
   // ─────────────────────────────────────────────────────────────
 
-  // Step 1: Audio Transcription via Gemini 2.5 Flash
+  // Step 1: Audio Transcription via Gemini 2.0 Flash
   let audioTranscript = {
     transcript: 'No audible speech detected in segment.',
     language: 'English/Unknown',
@@ -148,8 +148,8 @@ Respond ONLY in valid JSON matching this exact format:
   if (audio_base64 && apiKey) {
     try {
       const transcriptionPrompt = `
-Analyze this 30-second distress audio clip from a personal safety event.
-Extract verbatim speech/whispers/shouts, identify language/dialect (e.g. Hausa, Pidgin, Yoruba, English), emotional tone, speaker count, and any aggressive commands.
+Analyze this 15-second distress audio clip from a personal safety event.
+Extract verbatim speech/whispers/shouts, identify language/dialect (e.g. Hausa, Pidgin, Yoruba, English), emotional tone, speaker count, and any distress keywords like "help", "stop", "leave me", "no".
 
 Respond ONLY in valid JSON:
 {
@@ -188,10 +188,16 @@ Respond ONLY in valid JSON:
     }
   }
 
+  // Check if transcript contains distress speech keywords ("help", "stop", "no", "leave", "save", "threat")
+  const textLower = (audioTranscript.transcript || '').toLowerCase();
+  const toneLower = (audioTranscript.tone || '').toLowerCase();
+  const isDistressSpeech = /help|stop|no|leave|save|police|scream|shout|don't|dont|kill|threat/i.test(textLower) ||
+                           ['aggressive', 'panic', 'distress'].includes(toneLower);
+
   // Step 2: Individual Poll Vote Reasoning via Gemma 4
   const pollPrompt = `
-You are evaluating a 30-second window in Amana's 90-second threat trial.
-Cast your vote: 1 (KEEP / Threat signature present) or 0 (QUIT / Safe ambient baseline).
+You are evaluating a 15-second window in Amana's 45-second threat trial.
+Cast your vote: 1 (KEEP / Threat signature or distress spoken) or 0 (QUIT / Safe ambient baseline).
 
 Gemini Audio Transcription:
 - Transcript: "${audioTranscript.transcript}"
@@ -203,6 +209,9 @@ Sensor Metadata:
 - Loudness (RMS): ${sensor_summary.audio_features?.peak_rms ?? 0.5} / 1.0
 - High-Freq Energy (2-4kHz scream band): ${sensor_summary.audio_features?.band_2k_4k_energy ?? 0.2}
 - Peak Acceleration: ${sensor_summary.accelerometer_peak ?? 0} m/s²
+
+DECISION RULE:
+- If distress words ("help", "stop", "leave me", shouting) or high loudness (RMS > 0.12) are present, VOTE 1.
 
 Respond ONLY in valid JSON:
 {
@@ -216,14 +225,14 @@ Respond ONLY in valid JSON:
   if (!apiKey) {
     const rms = sensor_summary.audio_features?.peak_rms || 0.3;
     const accel = sensor_summary.accelerometer_peak || 0;
-    const vote = (rms > 0.18 || accel > 8.0) ? 1 : 0;
+    const vote = (isDistressSpeech || rms > 0.12 || accel > 8.0) ? 1 : 0;
 
     return res.status(200).json({
       decision_response: {
         vote,
         decision: vote === 1 ? 'keep' : 'quit',
         confidence: 0.85,
-        reason: vote === 1 ? 'Acoustic RMS sound spike detected (Vote 1).' : 'Quiet background baseline (Vote 0).',
+        reason: isDistressSpeech ? `Distress phrase detected: "${audioTranscript.transcript}". Vote 1.` : (vote === 1 ? 'Acoustic RMS sound spike detected (Vote 1).' : 'Quiet background baseline (Vote 0).'),
         transcript: audioTranscript.transcript || 'Background ambient audio captured.'
       }
     });
@@ -244,10 +253,13 @@ Respond ONLY in valid JSON:
       const text = gData.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) {
         const parsed = JSON.parse(text.trim());
+        const finalVote = isDistressSpeech ? 1 : (parsed.vote ?? 0);
         return res.status(200).json({
           decision_response: {
             ...parsed,
-            decision: parsed.vote === 1 ? 'keep' : 'quit'
+            vote: finalVote,
+            decision: finalVote === 1 ? 'keep' : 'quit',
+            transcript: audioTranscript.transcript || parsed.transcript
           }
         });
       }
@@ -256,17 +268,17 @@ Respond ONLY in valid JSON:
     console.error('[gemma-decision] Poll vote call error:', err);
   }
 
-  // Safety-first fallback for single poll: if RMS > 0.35 or accel > 12, vote 1, else 0
+  // Safety-first fallback for single poll: if distress speech or RMS > 0.12 or accel > 10, vote 1, else 0
   const rms = sensor_summary.audio_features?.peak_rms || 0.4;
   const accel = sensor_summary.accelerometer_peak || 0;
-  const fbVote = (rms > 0.35 || accel > 12.0) ? 1 : 0;
+  const fbVote = (isDistressSpeech || rms > 0.12 || accel > 10.0) ? 1 : 0;
 
   return res.status(200).json({
     decision_response: {
       vote: fbVote,
       decision: fbVote === 1 ? 'keep' : 'quit',
       confidence: 0.80,
-      reason: 'Safety fallback poll vote executed.',
+      reason: isDistressSpeech ? `Distress phrase caught: "${audioTranscript.transcript}". Vote 1.` : 'Safety fallback poll vote executed.',
       transcript: audioTranscript.transcript
     }
   });

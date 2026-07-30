@@ -232,11 +232,11 @@ async function runAcquisitionLoop(triggerType, initialGps) {
 
     setPhase('TRIGGERED');
 
-    // Capture 30s Audio Window + SHA-256 Hash
+    // Capture 15s Audio Window + SHA-256 Hash
     let audio_blob = null;
     let local_hash = null;
     try {
-      const captured = await captureAudioClip(30000);
+      const captured = await captureAudioClip(15000);
       audio_blob = captured.audio_blob;
       local_hash = captured.local_hash;
     } catch (err) {
@@ -262,7 +262,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
         dominant_frequency_hz: audioFeatures.dominant_frequency_hz || 2500,
         spectral_centroid: audioFeatures.spectral_centroid || 2200,
         zero_crossing_rate: audioFeatures.zero_crossing_rate || 0.10,
-        sustained_duration_ms: 30000
+        sustained_duration_ms: 15000
       }
     };
 
@@ -271,7 +271,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
       incident_id: tempIncident.id,
       segment_number: windowIdx,
       recorded_at: new Date().toISOString(),
-      duration_ms: 30000,
+      duration_ms: 15000,
       audio_blob,
       local_hash,
       audio_features: sensorSnapshot.audio_features,
