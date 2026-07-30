@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   } = req.body || {};
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
-  const gemmaModel = process.env.GEMMA_MODEL || 'gemma-4-31b-it';
+  const gemmaModel = process.env.GEMMA_MODEL || 'gemma-2-27b-it';
 
   // ─────────────────────────────────────────────────────────────
   // MODE A: FINAL 90s 3-POLL AGGREGATION DECISION
