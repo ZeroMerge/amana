@@ -585,7 +585,6 @@ export function VaultView({
       {/* Vault Header with View Toggle */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
         <div>
-          <div className="micro-label" style={{ marginBottom: 0 }}>SAVED VAULT</div>
           <h2 className="headline-md" style={{ margin: 0 }}>
             Saved Events ({incidents.length})
           </h2>

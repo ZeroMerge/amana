@@ -22,7 +22,8 @@ import {
 import { callGemmaMultiChat, blobToBase64 } from '../services/gemmaService';
 
 export function ChatView({ incidents = [], initialIncidentId = null }) {
-  const threads = useLiveQuery(() => getAllChatThreads(), []) || [];
+  const rawThreads = useLiveQuery(() => getAllChatThreads(), []);
+  const threads = rawThreads || [];
 
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -35,8 +36,10 @@ export function ChatView({ incidents = [], initialIncidentId = null }) {
   const fileInputRef = useRef(null);
   const chatBottomRef = useRef(null);
 
-  // Initialize or select active thread
+  // Initialize or select active thread (Wait until Dexie resolves rawThreads)
   useEffect(() => {
+    if (rawThreads === undefined) return; // Dexie still loading — do NOT create thread yet!
+
     async function initThread() {
       if (threads.length > 0 && !activeThreadId) {
         setActiveThreadId(threads[0].id);
@@ -46,7 +49,7 @@ export function ChatView({ incidents = [], initialIncidentId = null }) {
       }
     }
     initThread();
-  }, [threads, activeThreadId, initialIncidentId]);
+  }, [rawThreads, threads, activeThreadId, initialIncidentId]);
 
   // Set initial tagged incident from Vault navigation
   useEffect(() => {

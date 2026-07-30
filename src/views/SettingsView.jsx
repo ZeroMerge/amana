@@ -127,7 +127,6 @@ export function SettingsView() {
 
   return (
     <div style={{ padding: '0.5rem 0.25rem' }}>
-      <div className="micro-label">PREFERENCES</div>
       <h2 className="headline-md" style={{ marginBottom: '1rem', whiteSpace: 'nowrap' }}>Settings</h2>
 
       {/* Clean Sub-Tabs Selector — Zero 1px Borders */}

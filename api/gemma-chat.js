@@ -74,7 +74,8 @@ Respond in plain text only (no markdown headers, no bullet lists unless helpful)
 
     if (gemmaRes.ok) {
       const data = await gemmaRes.json();
-      const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const replyText = cleanGemmaOutput(rawText);
       if (replyText) {
         return res.status(200).json({ reply: replyText });
       }
@@ -96,7 +97,8 @@ Respond in plain text only (no markdown headers, no bullet lists unless helpful)
 
     if (fallbackRes.ok) {
       const fbData = await fallbackRes.json();
-      const fbText = fbData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      const rawFbText = fbData.candidates?.[0]?.content?.parts?.[0]?.text;
+      const fbText = cleanGemmaOutput(rawFbText);
       if (fbText) return res.status(200).json({ reply: fbText });
     }
 
@@ -105,6 +107,48 @@ Respond in plain text only (no markdown headers, no bullet lists unless helpful)
     console.error('[gemma-chat] Fetch error:', err);
     return res.status(200).json({ reply: computeFallbackReply(query, tagged_context) });
   }
+}
+
+/**
+ * Strips internal chain-of-thought/scratchpad bullets and extra quotes from AI responses
+ */
+function cleanGemmaOutput(text) {
+  if (!text) return null;
+
+  // Split into lines
+  const lines = text.split('\n');
+  const cleanLines = lines.filter(line => {
+    const trimmed = line.trim();
+    // Filter out bullet scratchpad lines
+    if (trimmed.startsWith('*') && (
+      trimmed.includes('Persona:') ||
+      trimmed.includes('Goal:') ||
+      trimmed.includes('Language Style:') ||
+      trimmed.includes('Constraints:') ||
+      trimmed.includes('User Input:') ||
+      trimmed.includes('Greeting:') ||
+      trimmed.includes('Purpose:') ||
+      trimmed.includes('Call to Action:') ||
+      trimmed.includes('Simple language?') ||
+      trimmed.includes('Direct/Helpful?') ||
+      trimmed.includes('No made-up') ||
+      trimmed.includes('Suggest tag') ||
+      trimmed.includes('Plain text') ||
+      trimmed.includes('Under 4 sentences?')
+    )) {
+      return false;
+    }
+    return true;
+  });
+
+  let result = cleanLines.join('\n').trim();
+
+  // Strip enclosing quotes if present
+  if (result.startsWith('"') && result.endsWith('"') && result.length > 2) {
+    result = result.slice(1, -1).trim();
+  }
+
+  return result || text.trim();
 }
 
 /**
