@@ -41,29 +41,26 @@ Recording #${rec.recording_number}:
 `).join('\n---\n')
     : 'No specific recordings tagged in this message.';
 
-  const systemPrompt = `You are Gemma, the AI assistant embedded in Amana — a personal safety and evidence preservation app used in Nigeria. 
-You help users understand their saved recordings, analyze incidents, and make sense of evidence captured automatically.
+  const systemPrompt = `You are Gemma, the AI assistant embedded in Amana — a personal safety and evidence preservation app in Nigeria.
+You help users understand their saved recordings, analyze incidents, and make sense of evidence.
 
-Use simple, clear language (Grade 5 level). Be direct and helpful. 
-Do NOT make up information that isn't in the recording context.
-If asked about something not in the context, say so honestly.
-
+Context Details:
 ${tagged_context.length > 0
-  ? `The user has tagged ${tagged_context.length} recording(s) in this message. Here is the evidence context:\n${contextBlock}`
-  : `No recordings are tagged. Respond helpfully and suggest the user tag a recording with / to analyze it.`
+  ? `Tagged Recordings Context:\n${contextBlock}`
+  : `No recordings tagged. Suggest the user tag a recording with / if they need analysis.`
 }
-${attachments_count > 0 ? `\nThe user also attached ${attachments_count} image(s) to this message.` : ''}
+${attachments_count > 0 ? `Attachments: ${attachments_count} image(s) attached.` : ''}
 
-User message: "${query}"
+User Query: "${query}"
 
-CRITICAL OUTPUT FORMAT INSTRUCTION:
-You MUST wrap your final user-facing answer inside <reply> and </reply> XML tags.
-Do NOT place any thinking, notes, or bullet points inside the <reply> tags.
+CRITICAL OUTPUT FORMAT RULE:
+You MUST respond ONLY with a single valid JSON object containing your final response string.
+Do NOT include internal notes, thinking steps, bullet lists, or text outside the JSON.
 
-Example format:
-<reply>
-Hello! I can help you analyze your recordings. Tag a recording with / to start.
-</reply>`;
+Required JSON Schema:
+{
+  "reply": "Your clean response to the user in 1 to 3 simple sentences."
+}`;
 
   // Step 1: Try Gemma 4 (gemma-4-31b-it)
   try {
@@ -74,7 +71,11 @@ Hello! I can help you analyze your recordings. Tag a recording with / to start.
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 512 }
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+            maxOutputTokens: 512
+          }
         })
       }
     );
@@ -82,7 +83,7 @@ Hello! I can help you analyze your recordings. Tag a recording with / to start.
     if (gemmaRes.ok) {
       const data = await gemmaRes.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      const replyText = cleanGemmaOutput(rawText);
+      const replyText = parseGemmaJsonResponse(rawText);
       if (replyText) {
         return res.status(200).json({ reply: replyText });
       }
@@ -97,7 +98,11 @@ Hello! I can help you analyze your recordings. Tag a recording with / to start.
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: systemPrompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 512 }
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+            maxOutputTokens: 512
+          }
         })
       }
     );
@@ -105,7 +110,7 @@ Hello! I can help you analyze your recordings. Tag a recording with / to start.
     if (fallbackRes.ok) {
       const fbData = await fallbackRes.json();
       const rawFbText = fbData.candidates?.[0]?.content?.parts?.[0]?.text;
-      const fbText = cleanGemmaOutput(rawFbText);
+      const fbText = parseGemmaJsonResponse(rawFbText);
       if (fbText) return res.status(200).json({ reply: fbText });
     }
 
@@ -117,39 +122,33 @@ Hello! I can help you analyze your recordings. Tag a recording with / to start.
 }
 
 /**
- * Extracts exact user-facing answer inside <reply>...</reply> tags
+ * Parses JSON response from Gemma 4 API and extracts the clean "reply" field
  */
-function cleanGemmaOutput(text) {
-  if (!text) return null;
+function parseGemmaJsonResponse(rawText) {
+  if (!rawText) return null;
 
-  // 1. Exact match inside <reply>...</reply> XML tags
-  const match = text.match(/<reply>([\s\S]*?)<\/reply>/i);
+  try {
+    // Strip markdown code fences if model wrapped response in ```json ... ```
+    let clean = rawText.trim();
+    if (clean.startsWith('```')) {
+      clean = clean.replace(/^```(json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    }
+
+    const parsed = JSON.parse(clean);
+    if (parsed && typeof parsed.reply === 'string' && parsed.reply.trim()) {
+      return parsed.reply.trim();
+    }
+  } catch (err) {
+    console.warn('[gemma-chat] JSON parse fallback on rawText:', err);
+  }
+
+  // Fallback extraction if JSON parsing failed
+  const match = rawText.match(/"reply"\s*:\s*"([\s\S]*?)"/i);
   if (match && match[1]) {
-    let clean = match[1].trim();
-    if (clean.startsWith('"') && clean.endsWith('"') && clean.length > 2) {
-      clean = clean.slice(1, -1).trim();
-    }
-    return clean;
+    return match[1].replace(/\\"/g, '"').trim();
   }
 
-  // 2. Fallback: Filter out thinking bullet lines if tags missing
-  const lines = text.split('\n');
-  const cleanLines = lines.filter(line => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('*') || trimmed.startsWith('-')) {
-      if (trimmed.includes(':') || trimmed.includes('?') || trimmed.includes('Constraint')) {
-        return false;
-      }
-    }
-    return true;
-  });
-
-  let result = cleanLines.join('\n').trim();
-  if (result.startsWith('"') && result.endsWith('"') && result.length > 2) {
-    result = result.slice(1, -1).trim();
-  }
-
-  return result || text.trim();
+  return null;
 }
 
 /**
