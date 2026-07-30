@@ -15,7 +15,8 @@ export function Navigation({
   enginePhase,
   sensorStates = { mic: true, gps: true, motion: true },
   onToggleSensor,
-  onManualTrigger
+  onManualTrigger,
+  onStopRecording
 }) {
   const isRecording = enginePhase !== 'IDLE';
 
@@ -38,10 +39,11 @@ export function Navigation({
             display: 'flex',
             alignItems: 'center',
             gap: '0.6rem',
-            background: 'var(--bg-elevated)',
+            background: isRecording ? 'rgba(220, 38, 38, 0.12)' : 'var(--bg-elevated)',
+            border: isRecording ? '1px solid rgba(220, 38, 38, 0.3)' : 'none',
             padding: '5px 9px',
             borderRadius: '8px',
-            border: 'none'
+            transition: 'all 0.2s ease'
           }}
         >
           {/* Sensor Icons Group */}
@@ -108,29 +110,54 @@ export function Navigation({
           </div>
 
           {/* Vertical Divider */}
-          <div style={{ width: '1px', height: '14px', background: 'var(--text-muted)', opacity: 0.3 }} />
+          <div style={{ width: '1px', height: '14px', background: isRecording ? '#dc2626' : 'var(--text-muted)', opacity: 0.3 }} />
 
-          {/* Quick Record Button (Rec) */}
-          <button
-            onClick={onManualTrigger}
-            title="Start quick 15s recording"
-            style={{
-              border: 'none',
-              background: 'transparent',
-              borderRadius: '8px',
-              padding: '2px 4px',
-              color: 'var(--text-primary)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              cursor: 'pointer'
-            }}
-          >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#dc2626' }} />
-            <span>Rec</span>
-          </button>
+          {/* Quick Record OR Stop Button */}
+          {isRecording ? (
+            <button
+              onClick={onStopRecording}
+              title="Stop active recording session"
+              style={{
+                border: 'none',
+                background: '#dc2626',
+                borderRadius: '6px',
+                padding: '3px 8px',
+                color: '#ffffff',
+                fontSize: '0.725rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(220,38,38,0.4)',
+                animation: 'pulse 1.5s infinite ease-in-out'
+              }}
+            >
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffffff' }} />
+              <span>STOP</span>
+            </button>
+          ) : (
+            <button
+              onClick={onManualTrigger}
+              title="Start quick 15s recording"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                borderRadius: '8px',
+                padding: '2px 4px',
+                color: 'var(--text-primary)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: 'pointer'
+              }}
+            >
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#dc2626' }} />
+              <span>Rec</span>
+            </button>
+          )}
         </div>
       </header>
 

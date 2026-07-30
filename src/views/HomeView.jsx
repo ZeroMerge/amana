@@ -19,7 +19,8 @@ export function HomeView({
   onOpenChat,
   onOpenSettings,
   onOpenMapModal,
-  onOpenLogModal
+  onOpenLogModal,
+  onStopRecording
 }) {
   const [activeBottomTab, setActiveBottomTab] = useState('map'); // 'map' | 'history'
 
@@ -38,17 +39,18 @@ export function HomeView({
         style={{
           padding: '1.5rem 1.25rem',
           textAlign: 'center',
-          border: 'none',
+          border: isRecording ? '1px solid rgba(220, 38, 38, 0.3)' : 'none',
           background: 'var(--bg-card)',
-          borderRadius: '24px'
+          borderRadius: '24px',
+          transition: 'all 0.3s ease'
         }}
       >
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: isRecording ? '#fee2e2' : '#dcfce7', borderRadius: '9999px', fontSize: '0.75rem', color: isRecording ? '#991b1b' : '#166534', fontWeight: 600, marginBottom: '1rem' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRecording ? '#dc2626' : '#16a34a' }} />
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRecording ? '#dc2626' : '#16a34a', animation: isRecording ? 'pulse 1.5s infinite ease-in-out' : 'none' }} />
           {enginePhase === 'LONG_TERM'
             ? 'Active Package Recording'
             : isRecording
-              ? 'Evaluating Threat — 90s Trial'
+              ? 'Evaluating Threat — 45s Trial (15s Polls)'
               : 'Listening Quietly'}
         </div>
 
@@ -63,7 +65,7 @@ export function HomeView({
           {enginePhase === 'LONG_TERM'
             ? 'Threat confirmed. Amana is recording a full evidence package in the background.'
             : isRecording
-              ? 'Analyzing 3 x 30s audio windows to verify if threat is real or noise.'
+              ? 'Analyzing 3 x 15s audio windows to verify if threat is real or noise.'
               : 'Amana is watching your back in the background.'}
         </p>
 
@@ -88,6 +90,33 @@ export function HomeView({
             );
           })}
         </div>
+
+        {/* STOP RECORDING BUTTON WHEN ACTIVE */}
+        {isRecording && (
+          <div style={{ marginTop: '1rem' }}>
+            <button
+              onClick={onStopRecording}
+              style={{
+                padding: '0.6rem 1.25rem',
+                background: 'rgba(220, 38, 38, 0.12)',
+                color: '#dc2626',
+                border: '1px solid rgba(220, 38, 38, 0.3)',
+                borderRadius: '14px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                backdropFilter: 'blur(12px)',
+                transition: 'all 0.2s cubic-bezier(0.32, 0.72, 0, 1)'
+              }}
+            >
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#dc2626' }} />
+              Stop Recording Session
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. GRID WRAPPER WITH DIM SOLID BORDER & MESSAGE BUBBLE CORNER RADIUS */}
