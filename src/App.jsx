@@ -58,9 +58,9 @@ export function App() {
       setActiveIncident(incident);
 
       if (phase === 'TRIGGERED') {
-        setToastMessage('Elevated sound detected · Evaluating threat...');
+        setToastMessage('Sound heard · Checking now...');
       } else if (phase === 'CLOSED') {
-        setToastMessage('Recording saved in Vault.');
+        setToastMessage('Saved safely in Vault.');
         // Run 30-min report check after closing
         checkPendingGemmaReports().catch(() => {});
       }

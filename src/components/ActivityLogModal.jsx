@@ -48,8 +48,8 @@ export function ActivityLogModal({ isOpen, onClose }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexShrink: 0 }}>
           <div>
-            <div className="micro-label" style={{ marginBottom: 0 }}>FORENSIC PAPER TRAIL</div>
-            <h3 className="headline-md" style={{ margin: 0, fontSize: '1.25rem' }}>Decision Audit Log</h3>
+            <div className="micro-label" style={{ marginBottom: 0 }}>SAFETY LOG</div>
+            <h3 className="headline-md" style={{ margin: 0, fontSize: '1.25rem' }}>Activity History</h3>
           </div>
 
           <button
@@ -111,7 +111,7 @@ export function ActivityLogModal({ isOpen, onClose }) {
                             color: isKeep ? '#166534' : '#991b1b'
                           }}
                         >
-                          {isKeep ? 'KEEP (VAULT PACKAGE)' : 'QUIT (AUDIO DISCARDED)'}
+                          {isKeep ? 'SAVED TO VAULT' : 'ALL CLEAR (AUDIO DELETED)'}
                         </span>
                       </div>
                       <div style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -138,7 +138,7 @@ export function ActivityLogModal({ isOpen, onClose }) {
                       {/* Rationale Statement */}
                       <div>
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                          DECISION RATIONALE
+                          WHY THIS WAS SAVED
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                           {log.reason || 'Sound returned to ambient baseline. Decision: QUIT.'}

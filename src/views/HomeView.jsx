@@ -47,25 +47,25 @@ export function HomeView({
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: enginePhase === 'LONG_TERM' ? '#ccfbf1' : isRecording ? '#fef3c7' : '#dcfce7', borderRadius: '9999px', fontSize: '0.75rem', color: enginePhase === 'LONG_TERM' ? '#0f766e' : isRecording ? '#92400e' : '#166534', fontWeight: 600, marginBottom: '1rem' }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: enginePhase === 'LONG_TERM' ? '#0d9488' : isRecording ? '#d97706' : '#16a34a' }} />
           {enginePhase === 'LONG_TERM'
-            ? 'Active Package Recording'
+            ? 'Saving Audio Package'
             : isRecording
-              ? 'Evaluating — 45s Trial (15s Polls)'
+              ? 'Checking Sound — 45s'
               : 'Listening Quietly'}
         </div>
 
         <h1 className="headline-lg" style={{ marginBottom: '0.3rem', fontSize: '1.35rem' }}>
           {enginePhase === 'LONG_TERM'
-            ? 'Recording Package'
+            ? 'Saving Recording'
             : isRecording
-              ? 'Sound Spike Detected — Evaluating...'
-              : 'Everything Is Calm'}
+              ? 'Checking Sound...'
+              : 'All Is Quiet'}
         </h1>
         <p className="body-sm" style={{ marginBottom: '1.25rem', color: 'var(--text-secondary)' }}>
           {enginePhase === 'LONG_TERM'
-            ? 'Amana is recording a full evidence package in the background.'
+            ? 'Amana is saving audio safely on your phone.'
             : isRecording
-              ? 'Analyzing 3 x 15s audio windows to verify if threat is real or noise.'
-              : 'Amana is watching in the background.'}
+              ? 'Listening for 45 seconds to see if everything is okay.'
+              : 'Amana is listening quietly in the background.'}
         </p>
 
         {/* Minimal Breathing Sensor Waveform */}
@@ -95,7 +95,7 @@ export function HomeView({
             onClick={onStopRecording}
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem', textDecoration: 'underline' }}
           >
-            Stop session
+            Stop checking
           </button>
         )}
       </div>

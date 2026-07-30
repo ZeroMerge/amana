@@ -487,7 +487,7 @@ export function VaultView({
         {/* 3. Gemma Written Summary & Investigation Report Section */}
         <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--bg-elevated)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <div className="micro-label" style={{ marginBottom: 0 }}>GEMMA WRITTEN SUMMARY</div>
+            <div className="micro-label" style={{ marginBottom: 0 }}>GEMMA AUDIO SUMMARY</div>
             {(activeReport?.threat_level || customReport?.threat_level) && (
               <span style={{
                 fontSize: '0.7rem',
@@ -497,7 +497,7 @@ export function VaultView({
                 background: (activeReport?.threat_level === 'High' || activeReport?.threat_level === 'Critical') ? '#fee2e2' : '#dcfce7',
                 color: (activeReport?.threat_level === 'High' || activeReport?.threat_level === 'Critical') ? '#991b1b' : '#166534'
               }}>
-                Threat Level: {activeReport?.threat_level || customReport?.threat_level || 'Normal'}
+                Status: {activeReport?.threat_level || customReport?.threat_level || 'Normal'}
               </span>
             )}
           </div>
@@ -507,13 +507,13 @@ export function VaultView({
              (customReport || activeReport)?.summary ||
              selectedIncident.ledger?.narrative ||
              selectedIncident.ledger?.summary ||
-             `${audioParts.length} audio clip${audioParts.length !== 1 ? 's' : ''} saved safely. Gemma auto-generates a forensic report 30 mins post-recording.`}
+             `${audioParts.length} audio clip${audioParts.length !== 1 ? 's' : ''} saved safely.`}
           </p>
 
           {/* Timeline Milestones if Report Exists */}
           {(customReport || activeReport)?.timeline?.length > 0 && (
             <div style={{ background: 'var(--bg-card)', padding: '0.75rem', borderRadius: '10px', marginBottom: '0.75rem' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>EVIDENCE TIMELINE</div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>RECORDING TIMELINE</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 {(customReport || activeReport).timeline.map((item, tIdx) => (
                   <div key={tIdx} style={{ fontSize: '0.75rem', color: 'var(--text-primary)', display: 'flex', gap: '0.5rem' }}>
@@ -547,7 +547,7 @@ export function VaultView({
                 opacity: isGeneratingReport ? 0.6 : 1
               }}
             >
-              {isGeneratingReport ? 'Gemma is analyzing audio clips...' : '⚡ Generate AI Forensic Report Now (Skip 30m Wait)'}
+              {isGeneratingReport ? 'Gemma is analyzing audio clips...' : '⚡ Generate Summary Now'}
             </button>
           )}
         </div>
