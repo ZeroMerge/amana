@@ -19,7 +19,8 @@ export function HomeView({
   onOpenChat,
   onOpenSettings,
   onOpenMapModal,
-  onOpenLogModal
+  onOpenLogModal,
+  onStopRecording
 }) {
   const [activeBottomTab, setActiveBottomTab] = useState('map'); // 'map' | 'history'
 
@@ -48,23 +49,23 @@ export function HomeView({
           {enginePhase === 'LONG_TERM'
             ? 'Active Package Recording'
             : isRecording
-              ? 'Evaluating Threat — 90s Trial'
+              ? 'Evaluating — 45s Trial (15s Polls)'
               : 'Listening Quietly'}
         </div>
 
         <h1 className="headline-lg" style={{ marginBottom: '0.3rem', fontSize: '1.35rem' }}>
           {enginePhase === 'LONG_TERM'
-            ? 'Confirmed Incident — Recording Package'
+            ? 'Recording Package'
             : isRecording
               ? 'Unusual Sound Caught — Evaluating...'
               : 'Everything Is Calm'}
         </h1>
         <p className="body-sm" style={{ marginBottom: '1.25rem', color: 'var(--text-secondary)' }}>
           {enginePhase === 'LONG_TERM'
-            ? 'Threat confirmed. Amana is recording a full evidence package in the background.'
+            ? 'Amana is recording a full evidence package in the background.'
             : isRecording
-              ? 'Analyzing 3 x 30s audio windows to verify if threat is real or noise.'
-              : 'Amana is watching your back in the background.'}
+              ? 'Analyzing 3 x 15s audio windows to verify if threat is real or noise.'
+              : 'Amana is watching in the background.'}
         </p>
 
         {/* Minimal Breathing Sensor Waveform */}
@@ -88,6 +89,15 @@ export function HomeView({
             );
           })}
         </div>
+        {/* Stop session — text only, no UI change */}
+        {isRecording && onStopRecording && (
+          <button
+            onClick={onStopRecording}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem', textDecoration: 'underline' }}
+          >
+            Stop session
+          </button>
+        )}
       </div>
 
       {/* 2. GRID WRAPPER WITH DIM SOLID BORDER & MESSAGE BUBBLE CORNER RADIUS */}
