@@ -44,8 +44,8 @@ export function HomeView({
           borderRadius: '24px'
         }}
       >
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: isRecording ? '#fee2e2' : '#dcfce7', borderRadius: '9999px', fontSize: '0.75rem', color: isRecording ? '#991b1b' : '#166534', fontWeight: 600, marginBottom: '1rem' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRecording ? '#dc2626' : '#16a34a' }} />
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: enginePhase === 'LONG_TERM' ? '#ccfbf1' : isRecording ? '#fef3c7' : '#dcfce7', borderRadius: '9999px', fontSize: '0.75rem', color: enginePhase === 'LONG_TERM' ? '#0f766e' : isRecording ? '#92400e' : '#166534', fontWeight: 600, marginBottom: '1rem' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: enginePhase === 'LONG_TERM' ? '#0d9488' : isRecording ? '#d97706' : '#16a34a' }} />
           {enginePhase === 'LONG_TERM'
             ? 'Active Package Recording'
             : isRecording
@@ -80,7 +80,7 @@ export function HomeView({
                 style={{
                   width: '3px',
                   height: `${h}px`,
-                  background: isRecording ? '#dc2626' : 'var(--text-primary)',
+                  background: enginePhase === 'LONG_TERM' ? '#0d9488' : isRecording ? '#d97706' : 'var(--text-primary)',
                   opacity: isRecording ? 1 : 0.4 + (i % 4) * 0.15,
                   borderRadius: '2px',
                   transition: 'height 0.15s ease'
