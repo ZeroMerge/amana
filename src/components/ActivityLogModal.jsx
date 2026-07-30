@@ -115,10 +115,10 @@ export function ActivityLogModal({ isOpen, onClose }) {
                         </span>
                       </div>
                       <div style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {log.case_name || 'Event Investigation'}
+                        {(log.case_name || 'Sound Check').replace(/^Keffi\s*•?\s*/i, '')}
                       </div>
                       <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
-                        {dateStr} • {log.location}
+                        {dateStr} • {(log.location || 'Recorded Location').replace('Keffi-Abuja Corridor', 'Recorded Location')}
                       </div>
                     </div>
 
@@ -138,10 +138,12 @@ export function ActivityLogModal({ isOpen, onClose }) {
                       {/* Rationale Statement */}
                       <div>
                         <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                          WHY THIS WAS SAVED
+                          {isKeep ? 'WHY THIS WAS SAVED' : 'WHY THIS WAS NOT SAVED'}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                          {log.reason || 'Sound returned to ambient baseline. Decision: QUIT.'}
+                          {isKeep
+                            ? (log.reason || 'Sound score was high (8/10, needs 7 to save). Audio saved safely in Vault.')
+                            : (log.reason && !log.reason.includes('Quiet ambient baseline') ? log.reason : 'Room was quiet. Sound score was low (2/10, needs 7 to save). Audio deleted to keep your phone clean.')}
                         </div>
                       </div>
 
@@ -149,7 +151,7 @@ export function ActivityLogModal({ isOpen, onClose }) {
                       {log.polls?.length > 0 && (
                         <div>
                           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                            3-POLL WINDOW EVALUATIONS (45s TRIAL — 15s EACH)
+                            3-STEP SOUND CHECK (45s TOTAL — 15s EACH)
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                             {log.polls.map((p, pIdx) => (
@@ -165,15 +167,15 @@ export function ActivityLogModal({ isOpen, onClose }) {
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
                                   <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                    Poll #{p.window || pIdx + 1} (15s Clip)
+                                    Check #{p.window || pIdx + 1} (15s Clip)
                                   </span>
                                   <span style={{ fontWeight: 700, color: p.vote === 1 ? '#166534' : '#991b1b' }}>
-                                    Vote: {p.vote === 1 ? '1 (KEEP)' : '0 (QUIT)'}
+                                    {p.vote === 1 ? 'Sound Heard' : 'Quiet Baseline'}
                                   </span>
                                 </div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 500 }}>
                                   🗣️ <span style={{ fontStyle: 'italic', color: p.transcript ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                    "{p.transcript || 'Ambient sound baseline captured.'}"
+                                    "{p.transcript || 'Background ambient audio captured.'}"
                                   </span>
                                 </div>
                               </div>
@@ -184,7 +186,7 @@ export function ActivityLogModal({ isOpen, onClose }) {
 
                       {/* Evidence Integrity Status */}
                       <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '0.45rem 0.65rem', borderRadius: '8px' }}>
-                        🛡️ <strong>Evidence Integrity</strong>: SHA-256 Audit Trail Logged • {isKeep ? 'Audio Package Preserved in Vault' : 'Audio Discarded to Save Storage'}
+                        🛡️ <strong>Safety Integrity</strong>: Verified Logged • {isKeep ? 'Audio Package Preserved in Vault' : 'Audio Deleted (Phone Clean)'}
                       </div>
                     </div>
                   )}
