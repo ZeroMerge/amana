@@ -39,14 +39,14 @@ export function HomeView({
         style={{
           padding: '1.5rem 1.25rem',
           textAlign: 'center',
-          border: isRecording ? '1px solid rgba(220, 38, 38, 0.3)' : 'none',
+          border: '1px solid var(--bg-elevated)',
           background: 'var(--bg-card)',
           borderRadius: '24px',
           transition: 'all 0.3s ease'
         }}
       >
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: isRecording ? '#fee2e2' : '#dcfce7', borderRadius: '9999px', fontSize: '0.75rem', color: isRecording ? '#991b1b' : '#166534', fontWeight: 600, marginBottom: '1rem' }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRecording ? '#dc2626' : '#16a34a', animation: isRecording ? 'pulse 1.5s infinite ease-in-out' : 'none' }} />
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: 'var(--bg-elevated)', borderRadius: '9999px', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '1rem' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isRecording ? 'var(--text-primary)' : 'var(--text-muted)' }} />
           {enginePhase === 'LONG_TERM'
             ? 'Active Package Recording'
             : isRecording
@@ -81,8 +81,8 @@ export function HomeView({
                 style={{
                   width: '3px',
                   height: `${h}px`,
-                  background: isRecording ? '#dc2626' : 'var(--text-primary)',
-                  opacity: isRecording ? 1 : 0.4 + (i % 4) * 0.15,
+                  background: 'var(--text-primary)',
+                  opacity: isRecording ? 0.9 : 0.35 + (i % 4) * 0.15,
                   borderRadius: '2px',
                   transition: 'height 0.15s ease'
                 }}
@@ -91,28 +91,29 @@ export function HomeView({
           })}
         </div>
 
-        {/* STOP RECORDING BUTTON WHEN ACTIVE */}
+        {/* CHILL LIQUID GLASS STOP RECORDING BUTTON */}
         {isRecording && (
           <div style={{ marginTop: '1rem' }}>
             <button
               onClick={onStopRecording}
               style={{
                 padding: '0.6rem 1.25rem',
-                background: 'rgba(220, 38, 38, 0.12)',
-                color: '#dc2626',
-                border: '1px solid rgba(220, 38, 38, 0.3)',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--bg-elevated)',
                 borderRadius: '14px',
                 fontSize: '0.8rem',
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                backdropFilter: 'blur(12px)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
                 transition: 'all 0.2s cubic-bezier(0.32, 0.72, 0, 1)'
               }}
             >
-              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#dc2626' }} />
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-primary)' }} />
               Stop Recording Session
             </button>
           </div>

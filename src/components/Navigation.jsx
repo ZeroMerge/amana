@@ -39,8 +39,8 @@ export function Navigation({
             display: 'flex',
             alignItems: 'center',
             gap: '0.6rem',
-            background: isRecording ? 'rgba(220, 38, 38, 0.12)' : 'var(--bg-elevated)',
-            border: isRecording ? '1px solid rgba(220, 38, 38, 0.3)' : 'none',
+            background: 'var(--bg-elevated)',
+            border: 'none',
             padding: '5px 9px',
             borderRadius: '8px',
             transition: 'all 0.2s ease'
@@ -65,7 +65,7 @@ export function Navigation({
                 transition: 'opacity 0.2s ease'
               }}
             >
-              <MicrophoneIcon style={{ width: '16px', height: '16px', color: isRecording && sensorStates.mic ? '#dc2626' : 'var(--text-primary)' }} />
+              <MicrophoneIcon style={{ width: '16px', height: '16px', color: 'var(--text-primary)' }} />
             </button>
 
             {/* GPS Sensor */}
@@ -110,7 +110,7 @@ export function Navigation({
           </div>
 
           {/* Vertical Divider */}
-          <div style={{ width: '1px', height: '14px', background: isRecording ? '#dc2626' : 'var(--text-muted)', opacity: 0.3 }} />
+          <div style={{ width: '1px', height: '14px', background: 'var(--text-muted)', opacity: 0.3 }} />
 
           {/* Quick Record OR Stop Button */}
           {isRecording ? (
@@ -118,23 +118,21 @@ export function Navigation({
               onClick={onStopRecording}
               title="Stop active recording session"
               style={{
-                border: 'none',
-                background: '#dc2626',
+                border: '1px solid var(--bg-elevated)',
+                background: 'var(--bg-main)',
                 borderRadius: '6px',
-                padding: '3px 8px',
-                color: '#ffffff',
+                padding: '2px 7px',
+                color: 'var(--text-primary)',
                 fontSize: '0.725rem',
-                fontWeight: 700,
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.3rem',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(220,38,38,0.4)',
-                animation: 'pulse 1.5s infinite ease-in-out'
+                cursor: 'pointer'
               }}
             >
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffffff' }} />
-              <span>STOP</span>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-primary)' }} />
+              <span>Stop</span>
             </button>
           ) : (
             <button
@@ -154,7 +152,7 @@ export function Navigation({
                 cursor: 'pointer'
               }}
             >
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#dc2626' }} />
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-muted)' }} />
               <span>Rec</span>
             </button>
           )}
