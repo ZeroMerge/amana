@@ -118,7 +118,7 @@ function computeClientFallbackDecision(sensorSummary = {}, ledger = {}) {
 
   const updatedEvents = [...(ledger.detected_events || [])];
   if (peakRms > 0.60) {
-    updatedEvents.push(`Unusual sound caught`);
+    updatedEvents.push(`Elevated sound detected`);
   }
 
   return {
@@ -202,12 +202,12 @@ function computeClientFallbackReport(incident, segments) {
       time: new Date(s.recorded_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       event: `Part #${s.segment_number || idx + 1} saved`
     })),
-    entities: ledger.known_entities || ['Keffi-Abuja Corridor'],
-    events: ledger.detected_events || ['Unusual sound caught'],
+    entities: ledger.known_entities || ['Recorded Location'],
+    events: ledger.detected_events || ['Elevated sound detected'],
     investigation_leads: ledger.investigation_leads || ['Ask Gemma about this recording'],
     evidence_integrity: 0.95,
-    narrative: `People talking and background sound heard around Keffi. ${segmentCount} audio clips were saved safely on your phone.`,
-    summary: `People talking and background sound heard around Keffi. ${segmentCount} audio clips were saved safely on your phone.`,
+    narrative: `${segmentCount} audio clip(s) saved safely in Vault with cryptographic SHA-256 hash.`,
+    summary: `${segmentCount} audio clip(s) saved safely in Vault with cryptographic SHA-256 hash.`,
     _source: 'local_fallback'
   };
 }

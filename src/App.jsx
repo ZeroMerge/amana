@@ -58,7 +58,7 @@ export function App() {
       setActiveIncident(incident);
 
       if (phase === 'TRIGGERED') {
-        setToastMessage('Unusual sound caught · Collecting data...');
+        setToastMessage('Elevated sound detected · Evaluating threat...');
       } else if (phase === 'CLOSED') {
         setToastMessage('Recording saved in Vault.');
         // Run 30-min report check after closing

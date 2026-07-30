@@ -57,7 +57,7 @@ export function HomeView({
           {enginePhase === 'LONG_TERM'
             ? 'Recording Package'
             : isRecording
-              ? 'Unusual Sound Caught — Evaluating...'
+              ? 'Sound Spike Detected — Evaluating...'
               : 'Everything Is Calm'}
         </h1>
         <p className="body-sm" style={{ marginBottom: '1.25rem', color: 'var(--text-secondary)' }}>

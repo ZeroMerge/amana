@@ -277,7 +277,7 @@ export function OnboardingView({ onCompleteOnboarding }) {
             </div>
 
             <div style={{ marginBottom: '0.85rem' }}>
-              1. Amana only records after hearing unusual noise. It does not record all your daily talks.
+              1. Amana only evaluates when loud sound or motion is detected. It does not record daily conversations.
             </div>
 
             <div style={{ marginBottom: '0.85rem' }}>
@@ -307,7 +307,7 @@ export function OnboardingView({ onCompleteOnboarding }) {
             See It In Action
           </h2>
           <p className="body-sm" style={{ marginBottom: '1.75rem', color: 'var(--text-secondary)' }}>
-            Tap play to hear how Amana notices unusual sound.
+            Tap play to hear how Amana detects distress sounds.
           </p>
 
           <div style={{ background: 'var(--bg-elevated)', border: 'none', borderRadius: '20px', padding: '1.5rem 1.25rem', marginBottom: '1.75rem' }}>
@@ -352,7 +352,7 @@ export function OnboardingView({ onCompleteOnboarding }) {
             {demoTriggered && (
               <div style={{ marginTop: '0.75rem', padding: '0.4rem 0.85rem', background: '#fee2e2', borderRadius: '9999px', fontSize: '0.75rem', color: '#991b1b', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', border: 'none' }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#dc2626' }} />
-                Unusual sound · Collecting data...
+                Elevated sound detected · Evaluating...
               </div>
             )}
           </div>
@@ -439,7 +439,7 @@ export function OnboardingView({ onCompleteOnboarding }) {
               <MicrophoneIcon style={{ width: '20px', height: '20px', color: 'var(--text-secondary)' }} />
               <div style={{ flex: 1, fontSize: '0.8rem' }}>
                 <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Microphone Access</div>
-                <div style={{ color: 'var(--text-muted)' }}>Saves 15 seconds of audio when unusual noise is heard</div>
+                <div style={{ color: 'var(--text-muted)' }}>Evaluates audio when loud sound is detected</div>
               </div>
               <ToggleSwitch isOn={permState.mic} />
             </div>
