@@ -282,6 +282,11 @@ export async function getAllAuditLogs() {
   return await db.audit_logs.orderBy('timestamp').reverse().toArray();
 }
 
+export async function getAuditLogForIncident(incidentId) {
+  if (!incidentId) return null;
+  return await db.audit_logs.where('incident_id').equals(incidentId).first();
+}
+
 export async function deleteAuditLog(logId) {
   await db.audit_logs.delete(logId);
 }

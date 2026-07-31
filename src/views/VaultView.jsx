@@ -12,7 +12,7 @@ import {
   MapPinIcon
 } from '@heroicons/react/24/solid';
 import { IncidentMap } from '../components/IncidentMap';
-import { getPermanentRecNumber, getSegmentsForIncident, generateUniqueCaseName } from '../services/db';
+import { getPermanentRecNumber, getSegmentsForIncident, getAuditLogForIncident, generateUniqueCaseName } from '../services/db';
 import { generateGemmaReportOnDemand } from '../services/incidentEngine';
 import { buildEvidenceZipPackage, triggerZipDownload } from '../services/zipExportService';
 
@@ -33,6 +33,8 @@ export function VaultView({
   const [segmentsLoading, setSegmentsLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [customReport, setCustomReport] = useState(null);
+  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [zipExportMsg, setZipExportMsg] = useState(null);
 
   // Real Audio Playback & Part Selection State
   const [activePartIndex, setActivePartIndex] = useState(0);
@@ -569,10 +571,18 @@ export function VaultView({
           {/* Export & Email ZIP Package Button */}
           <button
             onClick={async () => {
+              if (isExportingZip) return;
+              setIsExportingZip(true);
+              setZipExportMsg(null);
+
               try {
-                const { zipBlob, zipBase64, fileName } = await buildEvidenceZipPackage(selectedIncident, segments);
+                const auditLog = await getAuditLogForIncident(selectedIncident.id).catch(() => null);
+                const { zipBlob, zipBase64, fileName } = await buildEvidenceZipPackage(selectedIncident, segments, auditLog);
+
+                // 1. Download file locally
                 triggerZipDownload(zipBlob, fileName);
 
+                // 2. Dispatch to emergency safety contacts via serverless endpoint
                 const contacts = JSON.parse(localStorage.getItem('amana_contacts') || '[]');
                 await fetch('/api/send-alert', {
                   method: 'POST',
@@ -583,15 +593,21 @@ export function VaultView({
                     location: selectedIncident.gps_trail?.[0],
                     zipBase64
                   })
-                }).catch(() => {});
+                }).catch(err => console.warn('Email dispatch warning:', err));
+
+                setZipExportMsg('✓ .ZIP Evidence Package Exported & Sent!');
               } catch (err) {
                 console.error('ZIP Export Error:', err);
+                setZipExportMsg('Export failed. Please try again.');
+              } finally {
+                setIsExportingZip(false);
               }
             }}
+            disabled={isExportingZip}
             style={{
               border: 'none',
-              background: 'var(--bg-elevated)',
-              color: 'var(--text-primary)',
+              background: zipExportMsg ? '#dcfce7' : 'var(--bg-elevated)',
+              color: zipExportMsg ? '#166534' : 'var(--text-primary)',
               padding: '0.75rem',
               borderRadius: '12px',
               fontSize: '0.8rem',
@@ -600,10 +616,12 @@ export function VaultView({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.4rem'
+              gap: '0.4rem',
+              opacity: isExportingZip ? 0.6 : 1,
+              transition: 'all 0.2s ease'
             }}
           >
-            <span>📦 Export & Email .ZIP Evidence Package</span>
+            <span>{isExportingZip ? '📦 Compressing Evidence Package...' : (zipExportMsg || '📦 Export & Email .ZIP Evidence Package')}</span>
           </button>
         </div>
 
