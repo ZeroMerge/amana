@@ -19,7 +19,8 @@ export default async function handler(req, res) {
     query = '',
     tagged_context = [],
     attachments = [],
-    attachments_count = 0
+    attachments_count = 0,
+    isFirstMessage = false
   } = req.body || {};
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
@@ -27,7 +28,9 @@ export default async function handler(req, res) {
 
   if (!apiKey) {
     console.log('[gemma-chat] No API key — returning local fallback reply.');
-    return res.status(200).json({ reply: computeFallbackReply(query, tagged_context, attachments) });
+    const fallbackReply = computeFallbackReply(query, tagged_context, attachments);
+    const fallbackTitle = query.length > 24 ? query.slice(0, 24) + '...' : query || 'New Conversation';
+    return res.status(200).json({ title: fallbackTitle, reply: fallbackReply });
   }
 
   // Build a rich contextual prompt from tagged recordings
@@ -60,6 +63,7 @@ Do NOT include internal notes, thinking steps, bullet lists, or text outside the
 
 Required JSON Schema:
 {
+  ${isFirstMessage ? '"title": "A short, clear 3 to 4 word title for this new thread (e.g. Night Commute Query)",' : ''}
   "reply": "Your clean response to the user in 1 to 3 simple sentences."
 }`;
 

@@ -151,26 +151,31 @@ export function ChatView({ incidents = [], initialIncidentId = null }) {
     setAttachments([]);
     setIsGenerating(true);
 
-    // Auto-generate Thread Title on First Message
     const isFirstMessage = messages.length <= 1;
-    if (isFirstMessage && activeThread && (activeThread.title === 'New Conversation' || !activeThread.title)) {
-      const generatedTitle = userText
-        ? (userText.length > 28 ? userText.slice(0, 28) + '...' : userText)
-        : (curTagged.length > 0 ? `Recording #${getPermanentRecNumber(curTagged[0], 0, incidents.length)}` : 'Media Analysis');
-
-      await db.chat_threads.update(targetThreadId, { title: generatedTitle }).catch(() => {});
-    }
 
     try {
-      const gemmaReply = await callGemmaMultiChat({
+      const res = await callGemmaMultiChat({
         query: userText || 'Analyze attached recording and photo context.',
         taggedIncidents: curTagged,
-        attachments: curAtt
+        attachments: curAtt,
+        isFirstMessage
       });
+
+      const replyText = typeof res === 'string' ? res : res?.reply;
+      const aiTitle = typeof res === 'object' ? res?.title : null;
+
+      if (isFirstMessage && activeThread && (activeThread.title === 'New Conversation' || !activeThread.title)) {
+        const finalTitle = aiTitle || (userText
+          ? (userText.length > 24 ? userText.slice(0, 24) + '...' : userText)
+          : (curTagged.length > 0 ? `Recording #${getPermanentRecNumber(curTagged[0], 0, incidents.length)}` : 'Media Analysis'));
+
+        await db.chat_threads.update(targetThreadId, { title: finalTitle }).catch(() => {});
+      }
+
       await addChatMessage({
         threadId: targetThreadId,
         sender: 'gemma',
-        text: gemmaReply || 'I am ready to analyze your saved recordings. Ask me any question or tag a recording with /.',
+        text: replyText || 'I am ready to analyze your saved recordings. Ask me any question or tag a recording with /.',
         attachments: [],
         taggedIncidents: curTagged.map(t => t.id)
       });

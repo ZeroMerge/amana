@@ -472,16 +472,40 @@ export function SettingsView() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* Demo Clip 1: Panicked Scream */}
             <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                🔊 Audio Classifier Sample
+                😱 Panicked Scream & Vocal Distress Clip
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
-                Plays sample distress audio clip that triggers Gemma's vocal tone and distress word classifier (+3 points).
+                Triggers Gemma Vocal Tone (+2 pts) & 2–4kHz Scream Band (+2 pts). File: <code>/demo_samples/scream_distress.mp3</code>
               </div>
-              <audio controls src="/demo_sample.mp3" style={{ width: '100%', height: '36px' }} />
+              <audio controls src="/demo_samples/scream_distress.mp3" style={{ width: '100%', height: '36px' }} />
             </div>
 
+            {/* Demo Clip 2: Glass Shatter */}
+            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                💥 Glass Shatter & Sound Spike Clip
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
+                Triggers Acoustic Volume Spike (+1 pt) & Spectral Centroid Spike (+1 pt). File: <code>/demo_samples/glass_shatter.mp3</code>
+              </div>
+              <audio controls src="/demo_samples/glass_shatter.mp3" style={{ width: '100%', height: '36px' }} />
+            </div>
+
+            {/* Demo Clip 3: Shouting Help */}
+            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                🗣️ Spoken Threat & "Help" Commands Clip
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
+                Triggers Gemma Distress Keyword Intent (+3 pts). File: <code>/demo_samples/shouting_help.mp3</code>
+              </div>
+              <audio controls src="/demo_samples/shouting_help.mp3" style={{ width: '100%', height: '36px' }} />
+            </div>
+
+            {/* Motion Sensor Simulator */}
             <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
                 📱 Motion Sensor Jolt Simulator

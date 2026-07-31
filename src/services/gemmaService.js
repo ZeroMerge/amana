@@ -216,7 +216,7 @@ function computeClientFallbackReport(incident, segments) {
  * SOLID MULTI-RECORDING & MULTIMODAL GEMMA CHAT SERVICE
  * Aggregates tagged recordings, image attachments, and user query into Gemma
  */
-export async function callGemmaMultiChat({ query, taggedIncidents = [], attachments = [] }) {
+export async function callGemmaMultiChat({ query, taggedIncidents = [], attachments = [], isFirstMessage = false }) {
   // 1. Gather all segments across all tagged recordings
   const aggregatedContext = [];
   for (const inc of taggedIncidents) {
@@ -230,9 +230,9 @@ export async function callGemmaMultiChat({ query, taggedIncidents = [], attachme
     aggregatedContext.push({
       recording_number: inc.rec_number || 1,
       started_at: inc.started_at,
-      location: inc.gps_trail?.[0] ? `${inc.gps_trail[0].lat}° N, ${inc.gps_trail[0].lng}° E` : 'Keffi-Abuja Corridor',
+      location: inc.gps_trail?.[0] ? `${inc.gps_trail[0].lat}° N, ${inc.gps_trail[0].lng}° E` : 'Recorded Location',
       events: inc.ledger?.detected_events || ['Sound spike caught'],
-      entities: inc.ledger?.known_entities || ['Keffi Area'],
+      entities: inc.ledger?.known_entities || ['Recorded Area'],
       segment_count: segs.length || 2
     });
   }
@@ -252,7 +252,8 @@ export async function callGemmaMultiChat({ query, taggedIncidents = [], attachme
       query,
       tagged_context: aggregatedContext,
       attachments: cleanAttachments,
-      attachments_count: cleanAttachments.length
+      attachments_count: cleanAttachments.length,
+      isFirstMessage
     };
 
     const response = await fetch('/api/gemma-chat', {
@@ -266,7 +267,12 @@ export async function callGemmaMultiChat({ query, taggedIncidents = [], attachme
 
     if (response.ok) {
       const data = await response.json();
-      if (data && data.reply) return data.reply;
+      if (data) {
+        return {
+          reply: data.reply || 'I am ready to help analyze your saved recordings.',
+          title: data.title || null
+        };
+      }
     }
   } catch (err) {
     clearTimeout(timeoutId);
@@ -274,7 +280,9 @@ export async function callGemmaMultiChat({ query, taggedIncidents = [], attachme
   }
 
   // 3. Robust Local Deterministic Fallback Engine
-  return computeLocalMultiChatReply(query, taggedIncidents, aggregatedContext, cleanAttachments);
+  const fallbackReply = computeLocalMultiChatReply(query, taggedIncidents, aggregatedContext, cleanAttachments);
+  const fallbackTitle = query.length > 24 ? query.slice(0, 24) + '...' : query || 'New Conversation';
+  return { reply: fallbackReply, title: isFirstMessage ? fallbackTitle : null };
 }
 
 /**
