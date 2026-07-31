@@ -151,7 +151,7 @@ export function ActivityLogModal({ isOpen, onClose }) {
                       {log.polls?.length > 0 && (
                         <div>
                           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-                            3-STEP SOUND CHECK (45s TOTAL — 15s EACH)
+                            3-POLL GEMMA EVALUATION TRIAL (45s TOTAL — 15s PER POLL)
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                             {log.polls.map((p, pIdx) => (
@@ -166,17 +166,20 @@ export function ActivityLogModal({ isOpen, onClose }) {
                                 }}
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                    Check #{p.window || pIdx + 1} (15s Clip)
+                                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    Poll #{p.window || pIdx + 1} (Window {p.window || pIdx + 1})
                                   </span>
                                   <span style={{ fontWeight: 700, color: p.vote === 1 ? '#166534' : '#991b1b' }}>
-                                    {p.vote === 1 ? 'Sound Heard' : 'Quiet Baseline'}
+                                    {p.vote === 1 ? 'Vote 1: Threat/Keep' : 'Vote 0: Safe/Quiet'}
                                   </span>
                                 </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 500, marginBottom: '0.2rem' }}>
                                   🗣️ <span style={{ fontStyle: 'italic', color: p.transcript ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                    "{p.transcript || 'Background ambient audio captured.'}"
+                                    "{p.transcript || 'No vocal speech detected.'}"
                                   </span>
+                                </div>
+                                <div style={{ fontSize: '0.675rem', color: 'var(--text-secondary)' }}>
+                                  🤖 Evaluation: {p.reason || 'Gemma multimodal evidence classification complete.'}
                                 </div>
                               </div>
                             ))}
