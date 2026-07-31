@@ -11,6 +11,13 @@ export function ActivityLogModal({ isOpen, onClose }) {
     []
   ) || [];
 
+  // Auto-expand latest log entry when logs load or modal opens
+  React.useEffect(() => {
+    if (logs.length > 0 && !expandedLogId) {
+      setExpandedLogId(logs[0].id);
+    }
+  }, [logs, expandedLogId]);
+
   if (!isOpen) return null;
 
   return (
