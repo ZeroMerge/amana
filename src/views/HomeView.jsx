@@ -52,7 +52,7 @@ export function HomeView({
     // First time: download and cache locally as blob
     setTestLoading(true);
     try {
-      const res = await fetch('/demo_samples/glass_shatter.mp3');
+      const res = await fetch('/demo_sample.mp3');
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       testBlobUrlRef.current = blobUrl;
