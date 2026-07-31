@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ transcript: sensor_summary.live_transcript || 'NO_SPEECH' });
     }
 
-    const sttPrompt = `You are a verbatim speech transcriber. Listen to the provided audio file. Output ONLY a valid JSON object: { "transcript": "verbatim spoken text" }. If no speech is detected, output { "transcript": "NO_SPEECH" }. Do not add markdown or explanation.`;
+    const sttPrompt = `Transcribe any spoken words in this audio verbatim. Output ONLY the exact spoken text. If no spoken words exist, output NO_SPEECH.`;
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -48,16 +48,29 @@ export default async function handler(req, res) {
           contents: [{
             parts: [
               { text: sttPrompt },
-              { inlineData: { mimeType: 'audio/wav', data: audio_base64 } }
+              { inlineData: { mimeType: audio_mime || 'audio/wav', data: audio_base64 } }
             ]
           }]
         })
       });
       const data = await response.json();
-      const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const match = txt.match(/\{[\s\S]*\}/);
-      const parsed = match ? JSON.parse(match[0]) : {};
-      return res.status(200).json({ transcript: parsed.transcript || sensor_summary.live_transcript || 'NO_SPEECH' });
+      const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+
+      let transcript = txt;
+      if (txt.includes('{')) {
+        try {
+          const match = txt.match(/\{[\s\S]*\}/);
+          const parsed = match ? JSON.parse(match[0]) : {};
+          transcript = parsed.transcript || parsed.text || txt;
+        } catch (e) {}
+      }
+
+      transcript = transcript.replace(/```json|```/g, '').trim();
+      if (!transcript || transcript.toUpperCase().includes('NO_SPEECH')) {
+        transcript = sensor_summary.live_transcript || 'NO_SPEECH';
+      }
+
+      return res.status(200).json({ transcript });
     } catch (e) {
       return res.status(200).json({ transcript: sensor_summary.live_transcript || 'NO_SPEECH' });
     }
@@ -70,8 +83,8 @@ export default async function handler(req, res) {
     if (!apiKey) {
       return res.status(200).json({
         enrichment: {
-          corrected_transcript: raw_stt || 'No speech detected.',
-          speakers: raw_stt ? ['Speaker A', 'Speaker B'] : ['Ambient Audio'],
+          corrected_transcript: raw_stt !== 'NO_SPEECH' ? raw_stt : 'No speech detected.',
+          speakers: raw_stt !== 'NO_SPEECH' ? ['Speaker A (Aggressor)', 'Speaker B (Victim)'] : ['Ambient Audio'],
           ambient_sounds: sensor_summary.rms > 0.30 ? ['Sound spike'] : ['Background ambience'],
           distress_intent: sensor_summary.band_2k4k > 0.15 || /help|stop|police|leave/i.test(raw_stt),
           extracted_entities: ['Recorded Location']
@@ -79,14 +92,13 @@ export default async function handler(req, res) {
       });
     }
 
-    const enrichPrompt = `You are an expert safety evidence audio analyst. Analyze the raw speech transcript and audio file.
-Raw STT Transcript: "${raw_stt}"
-Sensor Data: ${JSON.stringify(sensor_summary)}
+    const enrichPrompt = `You are a forensic audio evidence analyst. Analyze this audio clip and raw transcript: "${raw_stt}".
+Extract background sounds (screams, glass shatter, vehicle engine, shouting), speaker count, corrected transcript (correcting Hausa/Pidgin errors), and distress intent.
 
 Output ONLY valid JSON matching this schema:
 {
   "enrichment": {
-    "corrected_transcript": "Cleaned verbatim transcript correcting Pidgin/Hausa errors",
+    "corrected_transcript": "verbatim corrected text",
     "speakers": ["Speaker A (Aggressor)", "Speaker B (Victim)"],
     "ambient_sounds": ["Glass shatter", "Engine noise", "Scream"],
     "distress_intent": true,
@@ -97,7 +109,7 @@ Output ONLY valid JSON matching this schema:
     try {
       const parts = [{ text: enrichPrompt }];
       if (audio_base64) {
-        parts.push({ inlineData: { mimeType: 'audio/wav', data: audio_base64 } });
+        parts.push({ inlineData: { mimeType: audio_mime || 'audio/wav', data: audio_base64 } });
       }
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -105,26 +117,36 @@ Output ONLY valid JSON matching this schema:
         body: JSON.stringify({ contents: [{ parts }] })
       });
       const data = await response.json();
-      const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const match = txt.match(/\{[\s\S]*\}/);
-      const parsed = match ? JSON.parse(match[0]) : {};
-      return res.status(200).json(parsed.enrichment ? parsed : {
-        enrichment: {
-          corrected_transcript: raw_stt || 'No speech detected.',
-          speakers: ['Speaker A'],
-          ambient_sounds: ['Background ambience'],
-          distress_intent: false,
-          extracted_entities: ['Recorded Location']
-        }
-      });
+      const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+
+      let enrichment = null;
+      const jsonMatch = txt.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          enrichment = parsed.enrichment || parsed;
+        } catch (e) {}
+      }
+
+      if (!enrichment || !enrichment.corrected_transcript) {
+        enrichment = {
+          corrected_transcript: raw_stt !== 'NO_SPEECH' ? raw_stt : 'Acoustic background audio captured.',
+          speakers: raw_stt !== 'NO_SPEECH' ? ['Speaker A', 'Speaker B'] : ['Ambient Audio'],
+          ambient_sounds: sensor_summary.rms > 0.30 ? ['Elevated sound spike'] : ['Background ambience'],
+          distress_intent: sensor_summary.band_2k4k > 0.15 || /help|stop|police|leave/i.test(raw_stt),
+          extracted_entities: ['Recorded Area']
+        };
+      }
+
+      return res.status(200).json({ enrichment });
     } catch (e) {
       return res.status(200).json({
         enrichment: {
-          corrected_transcript: raw_stt || 'No speech detected.',
+          corrected_transcript: raw_stt !== 'NO_SPEECH' ? raw_stt : 'Acoustic background audio captured.',
           speakers: ['Speaker A'],
           ambient_sounds: ['Background ambience'],
           distress_intent: false,
-          extracted_entities: ['Recorded Location']
+          extracted_entities: ['Recorded Area']
         }
       });
     }
