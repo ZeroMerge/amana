@@ -266,7 +266,7 @@ export async function createAuditLog(logData) {
     transcripts: logData.transcripts || [],
     movement_summary: logData.movement_summary || {},
     final_decision: logData.final_decision || null,
-    reason: logData.reason || 'Evaluating 90s continuous trial...'
+    reason: logData.reason || 'Evaluating 45s continuous trial...'
   };
 
   await db.audit_logs.put(entry);

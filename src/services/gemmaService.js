@@ -129,12 +129,12 @@ export async function enrichAudioContext({ audioBlob, sttRaw, sensorSnapshot = {
  * Call Gemma Decision API during active acquisition loop
  */
 export async function callGemmaDecision({
-  // Single 30s poll args
+  // Single 15s poll args
   audioBlob = null,
   sensorSummary = {},
   ledger = {},
   previousDecision = null,
-  // Final 90s aggregation args
+  // Final 45s aggregation args
   isFinalAggregation = false,
   polls = [],
   movement_summary = {},

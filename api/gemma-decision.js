@@ -1,8 +1,8 @@
 /**
- * Vercel Serverless Function: Gemma Decision Endpoint (90s 3-Poll Protocol)
+ * Vercel Serverless Function: Gemma Decision Endpoint (45s 3-Poll Protocol)
  * Handles both:
- * 1) 30-Second Single Window Poll (returns vote: 1 | 0)
- * 2) Final 90-Second 3-Poll Aggregation Decision (polls + movement data + event summary -> keep | quit)
+ * 1) 15-Second Single Window Poll (returns vote: 1 | 0)
+ * 2) Final 45-Second 3-Poll Aggregation Decision (polls + movement data + event summary -> keep | quit)
  */
 
 export default async function handler(req, res) {

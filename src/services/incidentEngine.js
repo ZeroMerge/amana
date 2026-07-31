@@ -2,7 +2,7 @@
  * Amana Adaptive Evidence Acquisition Engine
  * 90-Second 3-Poll Evaluation Protocol + 5-Minute Chunked Package Recording
  *
- * Stage 1: Trigger -> Continuous 90s Evaluation Phase (3 x 30s Chunks)
+ * Stage 1: Trigger -> Continuous 45s Evaluation Phase (3 x 15s Chunks)
  * Stage 2: 3-Poll Decision Aggregation (Polls + Movement + Event Summary -> KEEP or QUIT)
  * Stage 3: If QUIT: Purge temporary trial clips from DB & RAM; Save NOTHING to Vault.
  * Stage 4: If KEEP: Create Vault Package, Record Extended Duration (15m/30m/1h) in 5-minute chunks.
@@ -192,7 +192,7 @@ export async function triggerIncident(triggerType = 'audio') {
 
 /**
  * MASTER ACQUISITION LOOP:
- * Stage 1: 90s Trial Phase (3 x 30s Chunks)
+ * Stage 1: 45s Trial Phase (3 x 15s Chunks)
  * Stage 2: 3-Poll + Movement + Event Aggregation Call to Gemma
  * Stage 3: If QUIT -> Purge trial clips & delete temp incident. Save NOTHING to Vault.
  * Stage 4: If KEEP -> Lock Vault Package & Record Extended Duration in 5-minute chunks.
@@ -216,7 +216,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
     polls: [],
     transcripts: [],
     movement_summary: {},
-    reason: 'Evaluating 90s continuous trial...'
+    reason: 'Evaluating 45s continuous trial...'
   });
 
   const polls = [];
@@ -228,7 +228,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
   let maxBandEnergy = 0;
 
   // ─────────────────────────────────────────────────────────────
-  // STAGE 1: 3 x 30s CONTINUOUS EVALUATION TRIAL (90s TOTAL)
+  // STAGE 1: 3 x 15s CONTINUOUS EVALUATION TRIAL (45s TOTAL)
   // ─────────────────────────────────────────────────────────────
   for (let windowIdx = 1; windowIdx <= 3; windowIdx++) {
     if (manualStopRequested) break;
@@ -261,11 +261,11 @@ async function runAcquisitionLoop(triggerType, initialGps) {
       accelerometer_peak: motionData.mag,
       motion_pattern: motionData.isSpike ? 'irregular_jolt' : 'steady',
       audio_features: {
-        peak_rms: audioFeatures.rms || 0.40,
-        band_2k_4k_energy: audioFeatures.band_2k_4k_energy || 0.20,
-        dominant_frequency_hz: audioFeatures.dominant_frequency_hz || 2500,
-        spectral_centroid: audioFeatures.spectral_centroid || 2200,
-        zero_crossing_rate: audioFeatures.zero_crossing_rate || 0.10,
+        peak_rms: audioFeatures.rms || 0.0,
+        band_2k_4k_energy: audioFeatures.band_2k_4k_energy || 0.0,
+        dominant_frequency_hz: audioFeatures.dominant_frequency_hz || 0,
+        spectral_centroid: audioFeatures.spectral_centroid || 0,
+        zero_crossing_rate: audioFeatures.zero_crossing_rate || 0,
         sustained_duration_ms: 15000
       }
     };
@@ -428,7 +428,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
   // STAGE 3: IF QUIT -> PURGE TRIAL AUDIO BLOBS (AUDIT LOG STAYS PERMANENTLY!)
   // ─────────────────────────────────────────────────────────────
   if (finalDecision === 'quit' && !manualStopRequested) {
-    console.log('[Trial Outcome: QUIT] Discarding 90s trial audio blobs. Audit log stays permanent.');
+    console.log('[Trial Outcome: QUIT] Discarding 45s trial audio blobs. Audit log stays permanent.');
 
     await updateAuditLog(auditLog.id, {
       status: 'quit',
