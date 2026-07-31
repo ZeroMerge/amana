@@ -443,37 +443,56 @@ export async function captureAudioClip(durationMs = 10000) {
 
 let liveSpeechRecognizer = null;
 let currentLiveTranscript = '';
+let isSpeechActive = false;
 
 export function startLiveSpeechRecognition() {
   if (typeof window === 'undefined') return;
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRec) return;
 
+  if (isSpeechActive && liveSpeechRecognizer) return;
+
   try {
     liveSpeechRecognizer = new SpeechRec();
     liveSpeechRecognizer.continuous = true;
     liveSpeechRecognizer.interimResults = true;
     liveSpeechRecognizer.lang = 'en-NG';
+    isSpeechActive = true;
 
     liveSpeechRecognizer.onresult = (e) => {
-      let finalStr = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        finalStr += e.results[i][0].transcript;
+      let accumulatedStr = '';
+      for (let i = 0; i < e.results.length; i++) {
+        const text = e.results[i][0]?.transcript || '';
+        if (text) accumulatedStr += ' ' + text;
       }
-      if (finalStr.trim()) {
-        currentLiveTranscript = finalStr.trim();
+      if (accumulatedStr.trim()) {
+        currentLiveTranscript = (currentLiveTranscript + ' ' + accumulatedStr.trim()).trim();
       }
     };
 
-    liveSpeechRecognizer.onerror = () => {};
+    liveSpeechRecognizer.onerror = (err) => {
+      if (err?.error !== 'no-speech') {
+        console.warn('SpeechRecognition error:', err?.error);
+      }
+    };
+
     liveSpeechRecognizer.onend = () => {
-      if (isMonitoring && liveSpeechRecognizer) {
-        try { liveSpeechRecognizer.start(); } catch (e) {}
+      isSpeechActive = false;
+      if (isMonitoring) {
+        setTimeout(() => {
+          try {
+            if (liveSpeechRecognizer) {
+              liveSpeechRecognizer.start();
+              isSpeechActive = true;
+            }
+          } catch (e) {}
+        }, 200);
       }
     };
 
     liveSpeechRecognizer.start();
   } catch (e) {
+    isSpeechActive = false;
     console.warn('SpeechRecognition init error:', e);
   }
 }
