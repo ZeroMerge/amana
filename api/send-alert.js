@@ -24,7 +24,8 @@ export default async function handler(req, res) {
     isTest = false,
     isDeadManRelease = false,
     delayHours = 48,
-    targetContact = null
+    targetContact = null,
+    zipBase64 = null
   } = req.body || {};
 
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -47,6 +48,8 @@ export default async function handler(req, res) {
   let alertTitle = 'EMERGENCY ALERT — Amana Safety Incident';
   if (isTest) {
     alertTitle = 'Amana Test Alert — Recipient Verification';
+  } else if (zipBase64) {
+    alertTitle = `📦 Amana ZIP Evidence Package — Recording #${recNum}`;
   } else if (isDeadManRelease) {
     alertTitle = `🔐 Amana Automated Vault Release — Recording #${recNum} (${delayHours}h Unopened)`;
   }
@@ -57,46 +60,61 @@ export default async function handler(req, res) {
     for (const c of targetList) {
       if (!c.email) continue;
       try {
+        const emailBody = {
+          from: 'Amana Vault <onboarding@resend.dev>',
+          to: c.email,
+          subject: alertTitle,
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #f3f3f5; border-radius: 16px;">
+              <h2 style="color: #1f1f23; margin-top: 0;">
+                ${isDeadManRelease
+                  ? `🔐 Automated Vault Release — Rec #${recNum}`
+                  : (zipBase64
+                    ? `📦 Evidence ZIP Package Attached — Rec #${recNum}`
+                    : (isTest ? '🛡️ Amana Test Alert' : '🚨 Emergency Incident Alert'))}
+              </h2>
+
+              <p style="font-size: 15px; color: #52525b; line-height: 1.6;">
+                ${isDeadManRelease
+                  ? `Hello <strong>${c.name || 'Recipient'}</strong>, this evidence package was automatically released because <strong>Recording #${recNum}</strong> was saved and left unopened in the Amana Vault for ${delayHours} hours.`
+                  : (zipBase64
+                    ? `Hello <strong>${c.name || 'Recipient'}</strong>, attached is the complete compressed <strong>.ZIP Evidence Package</strong> containing all WebM audio clips, GPS route waypoints, and audit logs.`
+                    : (isTest
+                      ? `Hello <strong>${c.name || 'Recipient'}</strong>, this is a test alert from Amana. You are listed to receive automated vault releases if an emergency occurs.`
+                      : `Hello <strong>${c.name || 'Recipient'}</strong>, a safety incident was captured on Amana. Audio and sensor evidence have been saved safely.`))}
+              </p>
+
+              <div style="background: #ffffff; padding: 16px; border-radius: 12px; margin: 20px 0; border: 1px solid #e5e5e8;">
+                <div style="font-weight: 700; font-size: 14px; color: #1f1f23; margin-bottom: 6px;">Package Breakdown</div>
+                <div style="font-size: 13px; color: #52525b; margin-bottom: 4px;">• Recording: #${recNum}</div>
+                <div style="font-size: 13px; color: #52525b; margin-bottom: 4px;">• Status: Cryptographic SHA-256 Hash Verified</div>
+                <div style="font-size: 13px; color: #52525b; margin-bottom: 12px;">• Location: ${locationText}</div>
+                <a href="${mapLink}" style="display: inline-block; background: #1f1f23; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 13px;">View Location on Map</a>
+              </div>
+
+              <p style="font-size: 12px; color: #8e8e9a; margin-bottom: 0;">
+                Dispatched by Amana Autonomous Evidence Preservation System.
+              </p>
+            </div>
+          `
+        };
+
+        if (zipBase64) {
+          emailBody.attachments = [
+            {
+              filename: `Amana_Evidence_Package_Rec_${recNum}.zip`,
+              content: zipBase64.replace(/^data:application\/zip;base64,/, '')
+            }
+          ];
+        }
+
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${resendApiKey}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            from: 'Amana Vault <onboarding@resend.dev>',
-            to: c.email,
-            subject: alertTitle,
-            html: `
-              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #f3f3f5; border-radius: 16px;">
-                <h2 style="color: #1f1f23; margin-top: 0;">
-                  ${isDeadManRelease
-                    ? `🔐 Automated Vault Release — Rec #${recNum}`
-                    : (isTest ? '🛡️ Amana Test Alert' : '🚨 Emergency Incident Alert')}
-                </h2>
-
-                <p style="font-size: 15px; color: #52525b; line-height: 1.6;">
-                  ${isDeadManRelease
-                    ? `Hello <strong>${c.name || 'Recipient'}</strong>, this evidence package was automatically released because <strong>Recording #${recNum}</strong> was saved and left unopened in the Amana Vault for ${delayHours} hours.`
-                    : (isTest
-                      ? `Hello <strong>${c.name || 'Recipient'}</strong>, this is a test alert from Amana. You are listed to receive automated vault releases if an emergency occurs.`
-                      : `Hello <strong>${c.name || 'Recipient'}</strong>, a safety incident was captured on Amana. Audio and sensor evidence have been saved safely.`)}
-                </p>
-
-                <div style="background: #ffffff; padding: 16px; border-radius: 12px; margin: 20px 0; border: 1px solid #e5e5e8;">
-                  <div style="font-weight: 700; font-size: 14px; color: #1f1f23; margin-bottom: 6px;">Package Breakdown</div>
-                  <div style="font-size: 13px; color: #52525b; margin-bottom: 4px;">• Recording: #${recNum}</div>
-                  <div style="font-size: 13px; color: #52525b; margin-bottom: 4px;">• Status: Cryptographic SHA-256 Hash Verified</div>
-                  <div style="font-size: 13px; color: #52525b; margin-bottom: 12px;">• Location: ${locationText}</div>
-                  <a href="${mapLink}" style="display: inline-block; background: #1f1f23; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 13px;">View Location on Map</a>
-                </div>
-
-                <p style="font-size: 12px; color: #8e8e9a; margin-bottom: 0;">
-                  Dispatched by Amana Autonomous Evidence Preservation System.
-                </p>
-              </div>
-            `
-          })
+          body: JSON.stringify(emailBody)
         });
 
         const data = await response.json();

@@ -14,6 +14,7 @@ import {
 import { IncidentMap } from '../components/IncidentMap';
 import { getPermanentRecNumber, getSegmentsForIncident, generateUniqueCaseName } from '../services/db';
 import { generateGemmaReportOnDemand } from '../services/incidentEngine';
+import { buildEvidenceZipPackage, triggerZipDownload } from '../services/zipExportService';
 
 export function VaultView({
   incidents = [],
@@ -541,26 +542,68 @@ export function VaultView({
         </div>
 
         {/* 4. Action Buttons */}
-        <div style={{ paddingTop: '1.5rem', borderTop: '1px solid var(--bg-elevated)', display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
-          <button
-            onClick={() => onOpenChatWithIncident(selectedIncident.id)}
-            className="btn-primary-dark"
-            style={{ flex: 1, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.85rem' }}
-          >
-            <ChatBubbleLeftRightIcon style={{ width: '18px', height: '18px' }} />
-            <span>Ask Gemma About This Recording</span>
-          </button>
+        <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--bg-elevated)', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              onClick={() => onOpenChatWithIncident(selectedIncident.id)}
+              className="btn-primary-dark"
+              style={{ flex: 1, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.85rem' }}
+            >
+              <ChatBubbleLeftRightIcon style={{ width: '18px', height: '18px' }} />
+              <span>Ask Gemma About Recording</span>
+            </button>
 
+            <button
+              onClick={async () => {
+                if (audioRef.current) audioRef.current.pause();
+                await onDeleteIncident(selectedIncident.id);
+                setSelectedIncident(null);
+                setSegments([]);
+              }}
+              style={{ border: 'none', background: '#fee2e2', color: '#dc2626', padding: '0.85rem 1.15rem', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <TrashIcon style={{ width: '18px', height: '18px' }} />
+            </button>
+          </div>
+
+          {/* Export & Email ZIP Package Button */}
           <button
             onClick={async () => {
-              if (audioRef.current) audioRef.current.pause();
-              await onDeleteIncident(selectedIncident.id);
-              setSelectedIncident(null);
-              setSegments([]);
+              try {
+                const { zipBlob, zipBase64, fileName } = await buildEvidenceZipPackage(selectedIncident, segments);
+                triggerZipDownload(zipBlob, fileName);
+
+                const contacts = JSON.parse(localStorage.getItem('amana_contacts') || '[]');
+                await fetch('/api/send-alert', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    contacts,
+                    incident: selectedIncident,
+                    location: selectedIncident.gps_trail?.[0],
+                    zipBase64
+                  })
+                }).catch(() => {});
+              } catch (err) {
+                console.error('ZIP Export Error:', err);
+              }
             }}
-            style={{ border: 'none', background: '#fee2e2', color: '#dc2626', padding: '0.85rem 1.15rem', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{
+              border: 'none',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-primary)',
+              padding: '0.75rem',
+              borderRadius: '12px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem'
+            }}
           >
-            <TrashIcon style={{ width: '18px', height: '18px' }} />
+            <span>📦 Export & Email .ZIP Evidence Package</span>
           </button>
         </div>
 
