@@ -178,16 +178,16 @@ Accumulated Acoustic & Event Summary:
 
 EVIDENCE WEIGHT RULES (10-Point Scale):
 Score the accumulated evidence across all 3 windows:
-- Spoken Distress Words ("help", "stop", "police", "leave me", "no"): +3 points
+- Spoken Distress Words ("help", "stop", "police", "leave me", "no", "don't"): +3 points
 - Panicked, Screaming, or Aggressive Vocal Tone: +2 points
-- High 2-4kHz Scream Formant Concentration (> 0.20): +2 points
-- RMS Loudness Spike above baseline (deviation >= 2.5x): +1 point
-- Physical Collision / Jolt Motion (> 12 m/s²): +2 points
-- Multi-Window Persistence (elevated sound in 2+ windows): +1 point
+- High 2-4kHz Scream Formant Concentration (> 0.05): +2 points
+- RMS Loudness Spike / Crash above baseline (RMS >= 0.04): +2 points
+- Physical Collision / Jolt Motion (> 6.0 m/s²): +2 points
+- Multi-Window Persistence (elevated sound in 1+ windows): +2 points
 
-DECISION THRESHOLD (THRESHOLD = 7):
-- "keep": Total Accumulated Weight >= 7 (Confirmed threat).
-- "quit": Total Accumulated Weight < 7 (Isolated noise, safe ambient baseline, low evidence).
+DECISION THRESHOLD (THRESHOLD = 5):
+- "keep": Total Accumulated Weight >= 5 (Confirmed threat).
+- "quit": Total Accumulated Weight < 5 (Isolated noise, safe ambient baseline).
 
 Respond ONLY in valid JSON matching this exact format:
 {
@@ -206,17 +206,17 @@ Respond ONLY in valid JSON matching this exact format:
     const peakRms = event_summary.peak_rms || 0;
     const bandEnergy = event_summary.band_2k_4k || 0;
     const transcriptsText = JSON.stringify(event_summary.transcripts || []).toLowerCase();
-    const hasDistressText = /help|stop|no|leave|police|save|don't|dont|kill|threat/i.test(transcriptsText);
+    const hasDistressText = /help|stop|no|leave|police|save|don't|dont|kill|threat|scream|call/i.test(transcriptsText);
 
     let calculatedWeight = 0;
     if (hasDistressText) calculatedWeight += 3;
-    if (bandEnergy >= 0.20) calculatedWeight += 2;
-    if (peakRms >= 0.15) calculatedWeight += 1;
-    if (peakAccel >= 12.0) calculatedWeight += 2;
-    if (voteSum >= 2) calculatedWeight += 2; // Multi-window vote persistence
+    if (bandEnergy >= 0.05) calculatedWeight += 2;
+    if (peakRms >= 0.04) calculatedWeight += 2;
+    if (peakAccel >= 6.0) calculatedWeight += 2;
+    if (voteSum >= 1) calculatedWeight += 2; // Multi-window vote persistence
 
     const totalWeight = Math.min(10, calculatedWeight);
-    const isKeepFallback = totalWeight >= 7;
+    const isKeepFallback = totalWeight >= 5;
 
     if (!apiKey) {
       console.log('[gemma-decision] Server offline fallback for final aggregation (Weight:', totalWeight, ')');

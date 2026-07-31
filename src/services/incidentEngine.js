@@ -316,7 +316,7 @@ async function runAcquisitionLoop(triggerType, initialGps) {
         transcripts.push(rawStt);
       }
 
-      // 4. Stage 3: Gemma 10-Point Threat Evaluator Decision
+      // 4. Stage 3: Gemma 10-Point Threat Evaluator Decision (True AI Model Evaluation)
       const decisionRes = await callGemmaDecision({
         isFinalAggregation: false,
         audioBlob: wavBlob,
@@ -324,29 +324,16 @@ async function runAcquisitionLoop(triggerType, initialGps) {
         ledger: activeIncident.ledger
       });
 
-      const hasDistressSpeech = /help|stop|police|scream|leave|no|don't|please|call|attack|distress/i.test(windowTranscript || '');
-      const hasAcousticSpike = (audioFeatures.rms > 0.04 || audioFeatures.band_2k_4k_energy > 0.05 || motionData.mag > 6.0);
-
-      pollVote = (decisionRes.vote === 1 || decisionRes.decision === 'keep' || enrichment.distress_intent || hasDistressSpeech || (windowIdx === 1 && hasAcousticSpike)) ? 1 : 0;
-      
-      if (hasDistressSpeech) {
-        windowReason = `Distress vocal intent: "${windowTranscript}"`;
-      } else if (windowIdx === 1 && hasAcousticSpike) {
-        windowReason = 'Initial acoustic crash & impact spike detected.';
-      } else {
-        windowReason = decisionRes.reason || (pollVote === 1 ? 'Distress vocal tone or acoustic spike detected.' : 'Quiet background baseline.');
-      }
+      // Pure Gemma AI Decision — No client-side hardcoding
+      pollVote = decisionRes.vote ?? (decisionRes.decision === 'keep' || enrichment.distress_intent ? 1 : 0);
+      windowReason = decisionRes.reason || (pollVote === 1 ? 'Distress vocal tone or acoustic spike detected.' : 'Quiet background baseline.');
 
       await updateSegmentDecision(savedSegment.id, { ...decisionRes, enrichment });
     } catch (err) {
       console.warn(`Poll ${windowIdx} call error:`, err);
-      const hasDistressSpeech = /help|stop|police|scream|leave|no|don't|please|call|attack|distress/i.test(windowTranscript || '');
-      const hasAcousticSpike = (audioFeatures.rms > 0.04 || motionData.mag > 6.0);
-      
-      pollVote = (hasDistressSpeech || hasAcousticSpike) ? 1 : 0;
-      windowReason = hasDistressSpeech 
-        ? `Distress vocal intent: "${windowTranscript}"` 
-        : (pollVote === 1 ? 'Acoustic RMS sound spike detected.' : 'Quiet background baseline.');
+      // Pure fallback on network error only
+      pollVote = (audioFeatures.rms > 0.15 || motionData.mag > 8.0) ? 1 : 0;
+      windowReason = pollVote === 1 ? 'Acoustic RMS sound spike detected.' : 'Quiet background baseline.';
     }
 
     polls.push(pollVote);
