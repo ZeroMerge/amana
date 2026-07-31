@@ -253,16 +253,28 @@ export function VaultView({
     const permNumber = getPermanentRecNumber(selectedIncident, incIndex !== -1 ? incIndex : 0, incidents.length);
     const dateStr = new Date(selectedIncident.started_at || Date.now()).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    // Build real audio parts from fetched Dexie segments
+    // Build real audio parts from fetched Dexie segments & live audio player duration
     const audioParts = segments.length > 0
-      ? segments.map((seg, idx) => ({
-          id: seg.id,
-          name: `Part ${seg.segment_number || idx + 1}`,
-          duration: seg.duration_ms ? `${Math.round(seg.duration_ms / 1000)}s` : '15s',
-          time: new Date(seg.recorded_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          hasBlob: !!seg.audio_blob
-        }))
-      : [{ id: 'demo', name: 'Part 1', duration: '15s', time: dateStr, hasBlob: false }];
+      ? segments.map((seg, idx) => {
+          let durText = seg.duration_ms ? `${Math.round(seg.duration_ms / 1000)}s` : '15s';
+          if (idx === activePartIndex && durationSec && !isNaN(durationSec) && durationSec > 0) {
+            durText = `${Math.round(durationSec)}s`;
+          }
+          return {
+            id: seg.id,
+            name: `Part ${seg.segment_number || idx + 1}`,
+            duration: durText,
+            time: new Date(seg.recorded_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            hasBlob: !!seg.audio_blob
+          };
+        })
+      : [{
+          id: 'demo',
+          name: 'Part 1',
+          duration: (durationSec && !isNaN(durationSec) && durationSec > 0) ? `${Math.round(durationSec)}s` : '15s',
+          time: dateStr,
+          hasBlob: false
+        }];
 
     // GPS location from trail or fallback
     const gpsStart = selectedIncident.gps_trail?.[0];
