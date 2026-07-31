@@ -699,9 +699,16 @@ export function VaultView({
               {incidents.map((inc, index) => {
                 const permNum = getPermanentRecNumber(inc, index, incidents.length);
                 const dateStr = new Date(inc.started_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const actualDurSec = (inc.ended_at && inc.started_at)
-                  ? Math.max(15, Math.round((inc.ended_at - inc.started_at) / 1000))
-                  : (inc.ledger?.gemma_call_count ? inc.ledger.gemma_call_count * 15 : 45);
+                
+                const startTimeMs = inc.started_at ? new Date(inc.started_at).getTime() : 0;
+                const endTimeMs = inc.ended_at ? new Date(inc.ended_at).getTime() : 0;
+                const actualDurSec = (endTimeMs > 0 && startTimeMs > 0 && endTimeMs >= startTimeMs)
+                  ? Math.max(5, Math.round((endTimeMs - startTimeMs) / 1000))
+                  : (inc.ledger?.gemma_call_count ? inc.ledger.gemma_call_count * 15 : 15);
+
+                const rawTitle = inc.case_name || generateUniqueCaseName(inc.gps_trail?.[0]?.place, inc.trigger_type, permNum);
+                const isInterrupted = inc.status === 'interrupted' || rawTitle.includes('Interrupted');
+                const cleanTitle = rawTitle.replace(/\s*\([^)]*\)/g, '');
 
                 return (
                   <div
@@ -722,9 +729,20 @@ export function VaultView({
                       minHeight: '115px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
                     }}>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {inc.case_name || generateUniqueCaseName(inc.gps_trail?.[0]?.place, inc.trigger_type, permNum)}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.3rem', marginBottom: '0.2rem' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {cleanTitle}
+                          </div>
                         </div>
+
+                        {isInterrupted && (
+                          <div style={{ marginBottom: '0.35rem' }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: '#fee2e2', color: '#991b1b', textTransform: 'uppercase' }}>
+                              Interrupted
+                            </span>
+                          </div>
+                        )}
+
                         <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
                           {inc.gps_trail?.[0]
                             ? `${inc.gps_trail[0].lat?.toFixed(3)}° N, ${inc.gps_trail[0].lng?.toFixed(3)}° E`
@@ -749,23 +767,38 @@ export function VaultView({
               {incidents.map((inc, index) => {
                 const permNum = getPermanentRecNumber(inc, index, incidents.length);
                 const dateStr = new Date(inc.started_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const actualDurSec = (inc.ended_at && inc.started_at)
-                  ? Math.max(15, Math.round((inc.ended_at - inc.started_at) / 1000))
-                  : (inc.ledger?.gemma_call_count ? inc.ledger.gemma_call_count * 15 : 45);
-                const caseTitle = inc.case_name || generateUniqueCaseName(inc.gps_trail?.[0]?.place, inc.trigger_type, permNum);
+                
+                const startTimeMs = inc.started_at ? new Date(inc.started_at).getTime() : 0;
+                const endTimeMs = inc.ended_at ? new Date(inc.ended_at).getTime() : 0;
+                const actualDurSec = (endTimeMs > 0 && startTimeMs > 0 && endTimeMs >= startTimeMs)
+                  ? Math.max(5, Math.round((endTimeMs - startTimeMs) / 1000))
+                  : (inc.ledger?.gemma_call_count ? inc.ledger.gemma_call_count * 15 : 15);
+
+                const rawTitle = inc.case_name || generateUniqueCaseName(inc.gps_trail?.[0]?.place, inc.trigger_type, permNum);
+                const isInterrupted = inc.status === 'interrupted' || rawTitle.includes('Interrupted');
+                const cleanTitle = rawTitle.replace(/\s*\([^)]*\)/g, '');
 
                 return (
                   <div
                     key={inc.id}
                     onClick={() => setSelectedIncident(inc)}
                     style={{
-                      background: 'var(--bg-card)', border: 'none', padding: '0.85rem 1rem',
+                      background: 'var(--bg-card)', border: '1px solid var(--bg-elevated)', padding: '0.85rem 1rem',
                       borderRadius: '14px', display: 'flex', alignItems: 'center',
                       justifyContent: 'space-between', cursor: 'pointer'
                     }}
                   >
-                    <div style={{ fontSize: '0.825rem', color: 'var(--text-primary)' }}>
-                      • <strong style={{ fontWeight: 600 }}>{caseTitle}</strong>
+                    <div>
+                      <div style={{ fontSize: '0.825rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {cleanTitle}
+                      </div>
+                      {isInterrupted && (
+                        <div style={{ marginTop: '2px' }}>
+                          <span style={{ fontSize: '0.575rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: '#fee2e2', color: '#991b1b', textTransform: 'uppercase' }}>
+                            Interrupted
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                       {dateStr} • {actualDurSec}s
