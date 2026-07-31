@@ -21,7 +21,8 @@ export function HomeView({
   onOpenSettings,
   onOpenMapModal,
   onOpenLogModal,
-  onStopRecording
+  onStopRecording,
+  onDemoTrigger
 }) {
   const [activeBottomTab, setActiveBottomTab] = useState('map'); // 'map' | 'audit'
   const [testPlaying, setTestPlaying] = useState(false);
@@ -43,10 +44,23 @@ export function HomeView({
       setTestPlaying(false);
       return;
     }
+
+    const playAndTrigger = () => {
+      testAudioRef.current.onended = () => setTestPlaying(false);
+      testAudioRef.current.play()
+        .then(() => {
+          setTestPlaying(true);
+          // Directly fire the engine trigger — don't rely on mic picking up speaker
+          // (mobile OS hardware echo cancellation blocks that path)
+          if (onDemoTrigger) onDemoTrigger();
+        })
+        .catch(() => setTestPlaying(false));
+    };
+
     // If already cached, just play
     if (testBlobUrlRef.current) {
       testAudioRef.current.src = testBlobUrlRef.current;
-      testAudioRef.current.play().then(() => setTestPlaying(true)).catch(() => setTestPlaying(false));
+      playAndTrigger();
       return;
     }
     // First time: download and cache locally as blob
@@ -58,8 +72,7 @@ export function HomeView({
       testBlobUrlRef.current = blobUrl;
       if (!testAudioRef.current) testAudioRef.current = new Audio();
       testAudioRef.current.src = blobUrl;
-      testAudioRef.current.onended = () => setTestPlaying(false);
-      testAudioRef.current.play().then(() => setTestPlaying(true)).catch(() => setTestPlaying(false));
+      playAndTrigger();
     } catch (e) {
       console.warn('[Test Audio] Failed to load demo sample:', e);
     } finally {

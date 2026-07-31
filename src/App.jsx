@@ -191,6 +191,7 @@ export function App() {
             onOpenMapModal={() => setIsMapModalOpen(true)}
             onOpenLogModal={() => setIsLogModalOpen(true)}
             onStopRecording={handleStopRecording}
+            onDemoTrigger={() => triggerIncident('audio')}
           />
         ) : activeTab === 'vault' ? (
           <VaultView
