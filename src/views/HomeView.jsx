@@ -21,8 +21,7 @@ export function HomeView({
   onOpenSettings,
   onOpenMapModal,
   onOpenLogModal,
-  onStopRecording,
-  onDemoTrigger
+  onStopRecording
 }) {
   const [activeBottomTab, setActiveBottomTab] = useState('map'); // 'map' | 'audit'
   const [testPlaying, setTestPlaying] = useState(false);
@@ -36,7 +35,6 @@ export function HomeView({
 
   const auditLogs = useLiveQuery(() => getAllAuditLogs(), []) || [];
 
-  // Load and cache demo audio locally on first use
   const handleTestToggle = async () => {
     if (testPlaying && testAudioRef.current) {
       testAudioRef.current.pause();
@@ -50,20 +48,16 @@ export function HomeView({
       testAudioRef.current.play()
         .then(() => {
           setTestPlaying(true);
-          // Directly fire the engine trigger — don't rely on mic picking up speaker
-          // (mobile OS hardware echo cancellation blocks that path)
-          if (onDemoTrigger) onDemoTrigger();
         })
         .catch(() => setTestPlaying(false));
     };
 
-    // If already cached, just play
     if (testBlobUrlRef.current) {
       testAudioRef.current.src = testBlobUrlRef.current;
       playAndTrigger();
       return;
     }
-    // First time: download and cache locally as blob
+
     setTestLoading(true);
     try {
       const res = await fetch('/demo_sample.mp3');
@@ -80,7 +74,6 @@ export function HomeView({
     }
   };
 
-  // Initialise audio element once
   useEffect(() => {
     testAudioRef.current = new Audio();
     testAudioRef.current.onended = () => setTestPlaying(false);
@@ -92,8 +85,7 @@ export function HomeView({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.25rem 0' }}>
-      
-      {/* 1. TOP LISTENING STATUS HERO CARD */}
+
       <div
         className="card-flat"
         style={{
@@ -128,9 +120,8 @@ export function HomeView({
               : 'Amana is listening quietly in the background.'}
         </p>
 
-        {/* Real Web Audio API Waveform with Lerp Physics */}
         <RealAudioWaveform isRecording={isRecording} enginePhase={enginePhase} />
-        {/* Stop session — text only, no UI change */}
+
         {isRecording && onStopRecording && (
           <button
             onClick={onStopRecording}
@@ -141,7 +132,6 @@ export function HomeView({
         )}
       </div>
 
-      {/* 2. GRID WRAPPER WITH DIM SOLID BORDER & MESSAGE BUBBLE CORNER RADIUS */}
       <div
         style={{
           margin: 0,
@@ -153,8 +143,7 @@ export function HomeView({
         }}
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-          
-          {/* Cell 1: Vault */}
+
           <div
             onClick={onOpenVault}
             style={{
@@ -180,7 +169,6 @@ export function HomeView({
             </div>
           </div>
 
-          {/* Cell 2: Safety Timer */}
           <div
             onClick={onOpenSafetyTimer}
             style={{
@@ -205,7 +193,6 @@ export function HomeView({
             </div>
           </div>
 
-          {/* Cell 3: Ask Gemma */}
           <div
             onClick={onOpenChat}
             style={{
@@ -230,7 +217,6 @@ export function HomeView({
             </div>
           </div>
 
-          {/* Cell 4: Settings */}
           <div
             onClick={onOpenSettings}
             style={{
@@ -257,7 +243,6 @@ export function HomeView({
         </div>
       </div>
 
-      {/* 3. MAP & HISTORY WRAPPER WITH SOLID FILL AT REDUCED OPACITY & NO BORDER */}
       <div
         style={{
           border: 'none',
@@ -267,7 +252,6 @@ export function HomeView({
           backdropFilter: 'blur(8px)'
         }}
       >
-        {/* Underlined Tab Header + Test Audio Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid var(--bg-elevated)', paddingBottom: '0.65rem', marginBottom: '1rem' }}>
           <button
             onClick={() => setActiveBottomTab('map')}
@@ -307,7 +291,6 @@ export function HomeView({
             )}
           </button>
 
-          {/* Test audio button — small, right-aligned, no emoji */}
           <button
             onClick={handleTestToggle}
             disabled={testLoading}
@@ -329,7 +312,6 @@ export function HomeView({
           </button>
         </div>
 
-        {/* Tab 1: Map Content */}
         {activeBottomTab === 'map' && (
           <div>
             <div
@@ -348,7 +330,6 @@ export function HomeView({
           </div>
         )}
 
-        {/* Tab 2: Live Audit Log Paper Trail Rows */}
         {activeBottomTab === 'audit' && (
           <div>
             {auditLogs.length === 0 ? (
@@ -417,9 +398,6 @@ export function HomeView({
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// REAL-TIME WEB AUDIO API FREQUENCY SPECTRUM WITH LERP PHYSICS
-// ─────────────────────────────────────────────────────────────
 function RealAudioWaveform({ isRecording, enginePhase }) {
   const [barHeights, setBarHeights] = useState(() => Array(28).fill(4));
   const currentHeightsRef = useRef(Array(28).fill(4));

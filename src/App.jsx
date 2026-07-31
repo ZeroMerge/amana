@@ -31,12 +31,10 @@ export function App() {
   const [isVaultUnlocked, setIsVaultUnlocked] = useState(false);
   const [chatIncidentId, setChatIncidentId] = useState(null);
 
-  // Modal states
   const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
 
-  // Sensor state
   const [isMonitoring, setIsMonitoring] = useState(true);
   const [sensorStates, setSensorStates] = useState({ mic: true, gps: true, motion: true });
   const [enginePhase, setEnginePhase] = useState('IDLE');
@@ -45,13 +43,11 @@ export function App() {
   const [currentGps, setCurrentGps] = useState(null);
   const [gpsTrail, setGpsTrail] = useState([]);
 
-  // Live Dexie query for Incidents
   const incidents = useLiveQuery(
     () => db.incidents.orderBy('started_at').reverse().toArray(),
     []
   ) || [];
 
-  // Subscribe to engine state machine
   useEffect(() => {
     subscribeEngineState((phase, incident) => {
       setEnginePhase(phase);
@@ -61,12 +57,10 @@ export function App() {
         setToastMessage('Sound heard · Checking now...');
       } else if (phase === 'CLOSED') {
         setToastMessage('Saved safely in Vault.');
-        // Run 30-min report check after closing
         checkPendingGemmaReports().catch(() => {});
       }
     });
 
-    // Run 48-Hour Vault Release & 30-Min Gemma Report Checkers on startup
     checkDeadManVaultRelease().catch(err => console.warn('Vault release check error:', err));
     checkPendingGemmaReports().catch(err => console.warn('Gemma report check error:', err));
 
@@ -76,7 +70,6 @@ export function App() {
       checkPendingGemmaReports().catch(() => {});
     }, 60000);
 
-    // Start background GPS fix & continuous watcher
     getCurrentGpsFix().then(fix => {
       if (fix) setCurrentGps(fix);
     }).catch(err => console.warn('GPS initial fix warning:', err));
@@ -89,7 +82,6 @@ export function App() {
     return () => clearInterval(checkInterval);
   }, []);
 
-  // Initialize sensors after onboarding
   useEffect(() => {
     if (hasCompletedOnboarding) {
       initAudioEngine()
@@ -109,7 +101,6 @@ export function App() {
     }
   }, [hasCompletedOnboarding]);
 
-  // Handle Sensor Toggling from Header Icons
   const handleToggleSensor = (sensorName) => {
     setSensorStates(prev => {
       const next = { ...prev, [sensorName]: !prev[sensorName] };
@@ -191,7 +182,6 @@ export function App() {
             onOpenMapModal={() => setIsMapModalOpen(true)}
             onOpenLogModal={() => setIsLogModalOpen(true)}
             onStopRecording={handleStopRecording}
-            onDemoTrigger={() => triggerIncident('audio')}
           />
         ) : activeTab === 'vault' ? (
           <VaultView
@@ -218,7 +208,6 @@ export function App() {
         )}
       </main>
 
-      {/* Modals */}
       <SafetyTimerModal
         isOpen={isTimerModalOpen}
         onClose={() => setIsTimerModalOpen(false)}
@@ -240,10 +229,8 @@ export function App() {
         onClose={() => setIsLogModalOpen(false)}
       />
 
-      {/* PWA Native Install Prompt */}
       <PwaInstallPrompt />
 
-      {/* Toast Notification */}
       {toastMessage && (
         <Toast
           message={toastMessage}
