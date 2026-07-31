@@ -24,7 +24,7 @@ import {
   generateUniqueCaseName,
   db
 } from './db';
-import { captureAudioClip, extractFrameFeatures, blobTo16kHzWav, getLiveSpeechTranscript } from './audioEngine';
+import { captureAudioClip, extractFrameFeatures, blobTo16kHzWav, getLiveSpeechTranscript, cancelActiveCapture } from './audioEngine';
 import { startGpsTracking, stopGpsTracking, getLatestGpsFix } from './gpsService';
 import { getLatestMotionData } from './motionEngine';
 import { callGemmaDecision, callGemmaReport, extractRawSpeech, enrichAudioContext } from './gemmaService';
@@ -147,6 +147,8 @@ export async function generateGemmaReportOnDemand(incidentId) {
 export function requestManualStop() {
   if (isLoopRunning) {
     manualStopRequested = true;
+    cancelActiveCapture();
+    setPhase('CLOSING');
   }
 }
 

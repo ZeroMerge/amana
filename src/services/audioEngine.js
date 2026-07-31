@@ -343,6 +343,14 @@ export function stopAudioMonitoring() {
   }
 }
 
+let activeRecorder = null;
+
+export function cancelActiveCapture() {
+  if (activeRecorder && activeRecorder.state === 'recording') {
+    try { activeRecorder.stop(); } catch (e) {}
+  }
+}
+
 /**
  * Capture 10-Second Audio Clip via MediaRecorder & Compute SHA-256 Hash
  */
@@ -384,6 +392,7 @@ export async function captureAudioClip(durationMs = 10000) {
     try {
       const recorderOptions = selectedMimeType ? { mimeType: selectedMimeType } : {};
       const recorder = new MediaRecorder(recordStream, recorderOptions);
+      activeRecorder = recorder;
       const chunks = [];
 
       recorder.ondataavailable = (e) => {
@@ -393,6 +402,7 @@ export async function captureAudioClip(durationMs = 10000) {
       };
 
       recorder.onstop = async () => {
+        activeRecorder = null;
         // Clean up cloned stream tracks
         recordStream.getTracks().forEach(t => t.stop());
 
@@ -412,6 +422,7 @@ export async function captureAudioClip(durationMs = 10000) {
       };
 
       recorder.onerror = () => {
+        activeRecorder = null;
         recordStream.getTracks().forEach(t => t.stop());
       };
 
@@ -423,6 +434,7 @@ export async function captureAudioClip(durationMs = 10000) {
         }
       }, durationMs);
     } catch (err) {
+      activeRecorder = null;
       recordStream.getTracks().forEach(t => t.stop());
       reject(err);
     }
