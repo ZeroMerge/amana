@@ -362,16 +362,19 @@ export async function captureAudioClip(durationMs = 10000) {
 
   let selectedMimeType = '';
   for (const type of mimeTypes) {
-    if (MediaRecorder.isTypeSupported(type)) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) {
       selectedMimeType = type;
       break;
     }
   }
 
+  // 1. Dual Audio Stream Separation: Clone media stream for MediaRecorder to prevent AudioContext locking on mobile
+  const recordStream = mediaStream.clone();
+
   return new Promise((resolve, reject) => {
     try {
       const recorderOptions = selectedMimeType ? { mimeType: selectedMimeType } : {};
-      const recorder = new MediaRecorder(mediaStream, recorderOptions);
+      const recorder = new MediaRecorder(recordStream, recorderOptions);
       const chunks = [];
 
       recorder.ondataavailable = (e) => {
@@ -381,6 +384,9 @@ export async function captureAudioClip(durationMs = 10000) {
       };
 
       recorder.onstop = async () => {
+        // Clean up cloned stream tracks
+        recordStream.getTracks().forEach(t => t.stop());
+
         const audioBlob = new Blob(chunks, { type: selectedMimeType || 'audio/webm' });
         
         // Compute SHA-256 Hash using Web Crypto API
@@ -396,6 +402,10 @@ export async function captureAudioClip(durationMs = 10000) {
         });
       };
 
+      recorder.onerror = () => {
+        recordStream.getTracks().forEach(t => t.stop());
+      };
+
       recorder.start();
 
       setTimeout(() => {
@@ -404,6 +414,7 @@ export async function captureAudioClip(durationMs = 10000) {
         }
       }, durationMs);
     } catch (err) {
+      recordStream.getTracks().forEach(t => t.stop());
       reject(err);
     }
   });

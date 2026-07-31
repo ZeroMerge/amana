@@ -344,9 +344,9 @@ export async function callGemmaMultiChat({ query, taggedIncidents = [], attachme
     data_base64: att.data_base64 || ''
   })).filter(att => att.data_base64);
 
-  // 2. Try Vercel / Gemini Serverless API with 8-second timeout guard
+  // 2. Try Vercel / Gemini Serverless API with 18-second timeout guard for mobile data latency
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 18000);
 
   try {
     const payload = {
