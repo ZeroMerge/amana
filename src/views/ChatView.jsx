@@ -151,6 +151,16 @@ export function ChatView({ incidents = [], initialIncidentId = null }) {
     setAttachments([]);
     setIsGenerating(true);
 
+    // Auto-generate Thread Title on First Message
+    const isFirstMessage = messages.length <= 1;
+    if (isFirstMessage && activeThread && (activeThread.title === 'New Conversation' || !activeThread.title)) {
+      const generatedTitle = userText
+        ? (userText.length > 28 ? userText.slice(0, 28) + '...' : userText)
+        : (curTagged.length > 0 ? `Recording #${getPermanentRecNumber(curTagged[0], 0, incidents.length)}` : 'Media Analysis');
+
+      await db.chat_threads.update(targetThreadId, { title: generatedTitle }).catch(() => {});
+    }
+
     try {
       const gemmaReply = await callGemmaMultiChat({
         query: userText || 'Analyze attached recording and photo context.',

@@ -175,6 +175,24 @@ export function SettingsView() {
         </button>
 
         <button
+          onClick={() => setActiveSubTab('judge_demo')}
+          style={{
+            border: 'none',
+            background: 'transparent',
+            color: activeSubTab === 'judge_demo' ? 'var(--text-primary)' : 'var(--text-muted)',
+            fontWeight: activeSubTab === 'judge_demo' ? 700 : 500,
+            fontSize: '0.85rem',
+            padding: '0.4rem 0',
+            cursor: 'pointer',
+            borderBottom: activeSubTab === 'judge_demo' ? '2px solid var(--text-primary)' : '2px solid transparent',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Judge Demo Suite
+        </button>
+
+        <button
           onClick={() => setActiveSubTab('about')}
           style={{
             border: 'none',
@@ -441,8 +459,50 @@ export function SettingsView() {
           </div>
         </form>
       )}
+      {/* SUB-TAB 3: JUDGE DEMO SUITE */}
+      {activeSubTab === 'judge_demo' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+              Hackathon Judge Testing Suite
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Test Amana's 10-Point decision engine and sensor classifiers instantly without creating your own recordings.
+            </p>
+          </div>
 
-      {/* SUB-TAB 3: ABOUT */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                🔊 Audio Classifier Sample
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
+                Plays sample distress audio clip that triggers Gemma's vocal tone and distress word classifier (+3 points).
+              </div>
+              <audio controls src="/demo_sample.mp3" style={{ width: '100%', height: '36px' }} />
+            </div>
+
+            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                📱 Motion Sensor Jolt Simulator
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
+                Simulates physical collision or vehicle jolt (&gt;12 m/s²) to test accelerometer classifier (+2 points).
+              </div>
+              <button
+                onClick={() => {
+                  setStatusMsg('Simulated Motion Spike (14.2 m/s²) logged for testing.');
+                }}
+                style={{ border: 'none', background: 'var(--bg-elevated)', color: 'var(--text-primary)', padding: '0.5rem 0.85rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Test Motion Spike
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 4: ABOUT */}
       {activeSubTab === 'about' && (
         <div style={{ textAlign: 'center', padding: '1.75rem 0' }}>
           <div style={{ margin: '0 auto 0.85rem', width: '48px', height: '48px', background: 'var(--bg-elevated)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
