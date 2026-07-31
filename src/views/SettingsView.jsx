@@ -174,23 +174,7 @@ export function SettingsView() {
           Vault PIN
         </button>
 
-        <button
-          onClick={() => setActiveSubTab('judge_demo')}
-          style={{
-            border: 'none',
-            background: 'transparent',
-            color: activeSubTab === 'judge_demo' ? 'var(--text-primary)' : 'var(--text-muted)',
-            fontWeight: activeSubTab === 'judge_demo' ? 700 : 500,
-            fontSize: '0.85rem',
-            padding: '0.4rem 0',
-            cursor: 'pointer',
-            borderBottom: activeSubTab === 'judge_demo' ? '2px solid var(--text-primary)' : '2px solid transparent',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          Judge Demo Suite
-        </button>
+
 
         <button
           onClick={() => setActiveSubTab('about')}
@@ -459,72 +443,7 @@ export function SettingsView() {
           </div>
         </form>
       )}
-      {/* SUB-TAB 3: JUDGE DEMO SUITE */}
-      {activeSubTab === 'judge_demo' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-              Hackathon Judge Testing Suite
-            </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Test Amana's 10-Point decision engine and sensor classifiers instantly without creating your own recordings.
-            </p>
-          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {/* Demo Clip 1: Panicked Scream */}
-            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                😱 Panicked Scream & Vocal Distress Clip
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
-                Triggers Gemma Vocal Tone (+2 pts) & 2–4kHz Scream Band (+2 pts). File: <code>/demo_samples/scream_distress.mp3</code>
-              </div>
-              <audio controls src="/demo_samples/scream_distress.mp3" style={{ width: '100%', height: '36px' }} />
-            </div>
-
-            {/* Demo Clip 2: Glass Shatter */}
-            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                💥 Glass Shatter & Sound Spike Clip
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
-                Triggers Acoustic Volume Spike (+1 pt) & Spectral Centroid Spike (+1 pt). File: <code>/demo_samples/glass_shatter.mp3</code>
-              </div>
-              <audio controls src="/demo_samples/glass_shatter.mp3" style={{ width: '100%', height: '36px' }} />
-            </div>
-
-            {/* Demo Clip 3: Shouting Help */}
-            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                🗣️ Spoken Threat & "Help" Commands Clip
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
-                Triggers Gemma Distress Keyword Intent (+3 pts). File: <code>/demo_samples/shouting_help.mp3</code>
-              </div>
-              <audio controls src="/demo_samples/shouting_help.mp3" style={{ width: '100%', height: '36px' }} />
-            </div>
-
-            {/* Motion Sensor Simulator */}
-            <div style={{ background: 'var(--bg-card)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid var(--bg-elevated)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                📱 Motion Sensor Jolt Simulator
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
-                Simulates physical collision or vehicle jolt (&gt;12 m/s²) to test accelerometer classifier (+2 points).
-              </div>
-              <button
-                onClick={() => {
-                  setStatusMsg('Simulated Motion Spike (14.2 m/s²) logged for testing.');
-                }}
-                style={{ border: 'none', background: 'var(--bg-elevated)', color: 'var(--text-primary)', padding: '0.5rem 0.85rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Test Motion Spike
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* SUB-TAB 4: ABOUT */}
       {activeSubTab === 'about' && (
