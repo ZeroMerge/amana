@@ -331,10 +331,30 @@ async function runAcquisitionLoop(triggerType, initialGps) {
     const updatedLedger = {
       ...currentLedger,
       collection_window: windowIdx,
-      elapsed_seconds: windowIdx * 30,
+      elapsed_seconds: windowIdx * 15,
       gemma_call_count: (currentLedger.gemma_call_count || 0) + 1
     };
     activeIncident = await updateIncidentLedger(activeIncident.id, updatedLedger, 'collecting').catch(() => activeIncident);
+
+    // GRACEFUL INTERRUPTION: If user requested stop during Poll 1 or Poll 2, preserve collected audio and exit
+    if (manualStopRequested && windowIdx < 3) {
+      console.log(`[Interrupted by User] Early stop during Poll #${windowIdx}. Preserving ${trialSegments.length} segment(s).`);
+
+      await updateAuditLog(auditLog.id, {
+        status: 'interrupted',
+        final_decision: 'INTERRUPTED',
+        reason: `Interrupted by User. Captured ${trialSegments.length} audio clip(s) saved safely.`
+      }).catch(() => {});
+
+      await db.incidents.update(tempIncident.id, {
+        status: 'interrupted',
+        case_name: `${caseName} (Interrupted)`,
+        ended_at: new Date().toISOString()
+      }).catch(() => {});
+
+      setPhase('CLOSED');
+      return;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -342,7 +362,9 @@ async function runAcquisitionLoop(triggerType, initialGps) {
   // ─────────────────────────────────────────────────────────────
   setPhase('DECIDING');
   let finalDecision = 'keep';
-  let decisionReason = 'Threat confirmed by 3-poll evaluation & motion data.';
+  let decisionReason = manualStopRequested
+    ? 'Interrupted by User after Poll 3. Recording saved safely.'
+    : 'Threat confirmed by 3-poll evaluation & motion data.';
 
   try {
     const aggRes = await callGemmaDecision({
@@ -362,6 +384,10 @@ async function runAcquisitionLoop(triggerType, initialGps) {
 
     finalDecision = aggRes.decision || 'keep';
     if (aggRes.reason) decisionReason = aggRes.reason;
+    if (manualStopRequested) {
+      decisionReason += ' (Interrupted by User)';
+      finalDecision = 'keep'; // Always keep audio if user manually recorded/interrupted at Poll 3
+    }
   } catch (err) {
     console.warn('Final aggregation decision threw; applying safety-first KEEP fallback:', err);
     finalDecision = 'keep';
