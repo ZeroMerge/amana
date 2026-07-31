@@ -23,13 +23,59 @@ export function HomeView({
   onOpenLogModal,
   onStopRecording
 }) {
-  const [activeBottomTab, setActiveBottomTab] = useState('map'); // 'map' | 'history'
+  const [activeBottomTab, setActiveBottomTab] = useState('map'); // 'map' | 'audit'
+  const [testPlaying, setTestPlaying] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
+  const testAudioRef = useRef(null);
+  const testBlobUrlRef = useRef(null);
 
   const defaultLat = currentGps?.lat || 8.9969;
   const defaultLng = currentGps?.lng || 7.3195;
   const isRecording = enginePhase !== 'IDLE';
 
   const auditLogs = useLiveQuery(() => getAllAuditLogs(), []) || [];
+
+  // Load and cache demo audio locally on first use
+  const handleTestToggle = async () => {
+    if (testPlaying && testAudioRef.current) {
+      testAudioRef.current.pause();
+      testAudioRef.current.currentTime = 0;
+      setTestPlaying(false);
+      return;
+    }
+    // If already cached, just play
+    if (testBlobUrlRef.current) {
+      testAudioRef.current.src = testBlobUrlRef.current;
+      testAudioRef.current.play().then(() => setTestPlaying(true)).catch(() => setTestPlaying(false));
+      return;
+    }
+    // First time: download and cache locally as blob
+    setTestLoading(true);
+    try {
+      const res = await fetch('/demo_samples/glass_shatter.mp3');
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      testBlobUrlRef.current = blobUrl;
+      if (!testAudioRef.current) testAudioRef.current = new Audio();
+      testAudioRef.current.src = blobUrl;
+      testAudioRef.current.onended = () => setTestPlaying(false);
+      testAudioRef.current.play().then(() => setTestPlaying(true)).catch(() => setTestPlaying(false));
+    } catch (e) {
+      console.warn('[Test Audio] Failed to load demo sample:', e);
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  // Initialise audio element once
+  useEffect(() => {
+    testAudioRef.current = new Audio();
+    testAudioRef.current.onended = () => setTestPlaying(false);
+    return () => {
+      if (testAudioRef.current) testAudioRef.current.pause();
+      if (testBlobUrlRef.current) URL.revokeObjectURL(testBlobUrlRef.current);
+    };
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.25rem 0' }}>
@@ -208,8 +254,8 @@ export function HomeView({
           backdropFilter: 'blur(8px)'
         }}
       >
-        {/* Underlined Tab Header */}
-        <div style={{ display: 'flex', gap: '1.5rem', borderBottom: '1px solid var(--bg-elevated)', paddingBottom: '0.65rem', marginBottom: '1rem' }}>
+        {/* Underlined Tab Header + Test Audio Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid var(--bg-elevated)', paddingBottom: '0.65rem', marginBottom: '1rem' }}>
           <button
             onClick={() => setActiveBottomTab('map')}
             style={{
@@ -230,22 +276,43 @@ export function HomeView({
           </button>
 
           <button
-            onClick={() => setActiveBottomTab('history')}
+            onClick={() => setActiveBottomTab('audit')}
             style={{
               border: 'none',
               background: 'transparent',
               fontSize: '0.875rem',
               fontWeight: 700,
-              color: activeBottomTab === 'history' ? 'var(--text-primary)' : 'var(--text-muted)',
+              color: activeBottomTab === 'audit' ? 'var(--text-primary)' : 'var(--text-muted)',
               cursor: 'pointer',
               paddingBottom: '0.25rem',
               position: 'relative'
             }}
           >
-            History
-            {activeBottomTab === 'history' && (
+            Audit Log
+            {activeBottomTab === 'audit' && (
               <div style={{ position: 'absolute', bottom: '-0.7rem', left: 0, right: 0, height: '2px', background: 'var(--text-primary)', borderRadius: '2px' }} />
             )}
+          </button>
+
+          {/* Test audio button — small, right-aligned, no emoji */}
+          <button
+            onClick={handleTestToggle}
+            disabled={testLoading}
+            style={{
+              marginLeft: 'auto',
+              border: '1px solid var(--bg-elevated)',
+              background: testPlaying ? 'var(--bg-elevated)' : 'transparent',
+              color: testPlaying ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              padding: '0.2rem 0.55rem',
+              borderRadius: '6px',
+              cursor: testLoading ? 'wait' : 'pointer',
+              letterSpacing: '0.03em',
+              lineHeight: 1.5
+            }}
+          >
+            {testLoading ? '...' : testPlaying ? 'Stop' : 'Test'}
           </button>
         </div>
 
@@ -269,7 +336,7 @@ export function HomeView({
         )}
 
         {/* Tab 2: Live Audit Log Paper Trail Rows */}
-        {activeBottomTab === 'history' && (
+        {activeBottomTab === 'audit' && (
           <div>
             {auditLogs.length === 0 ? (
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', padding: '0.5rem 0' }}>
@@ -325,7 +392,7 @@ export function HomeView({
                 onClick={onOpenLogModal}
                 style={{ border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
               >
-                Expand Full History →
+                Expand Full Audit Log →
               </button>
             </div>
           </div>

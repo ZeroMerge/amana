@@ -56,7 +56,7 @@ export function ActivityLogModal({ isOpen, onClose }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexShrink: 0 }}>
           <div>
             <div className="micro-label" style={{ marginBottom: 0 }}>SAFETY LOG</div>
-            <h3 className="headline-md" style={{ margin: 0, fontSize: '1.25rem' }}>Activity History</h3>
+            <h3 className="headline-md" style={{ margin: 0, fontSize: '1.25rem' }}>Audit Log</h3>
           </div>
 
           <button
@@ -149,7 +149,7 @@ export function ActivityLogModal({ isOpen, onClose }) {
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
                           {isKeep
-                            ? (log.reason || 'Sound score was high (8/10, needs 7 to save). Audio saved safely in Vault.')
+                            ? (log.reason || 'High 2-4kHz Scream Formant Concentration (> 0.12): +2 points, RMS Loudness Spike / Crash above baseline (RMS >= 0.12): +2 points, Physical Collision / Jolt Motion (> 8.0 m/s²): +2 points, Multi-Window Persistence (elevated sound in 2+ windows): +2 points. Audio saved safely in Vault.')
                             : (log.reason && !log.reason.includes('Quiet ambient baseline') ? log.reason : 'Room was quiet. Sound score was low (2/10, needs 7 to save). Audio deleted to keep your phone clean.')}
                         </div>
                       </div>

@@ -206,14 +206,15 @@ Respond ONLY in valid JSON matching this exact format:
     const peakRms = event_summary.peak_rms || 0;
     const bandEnergy = event_summary.band_2k_4k || 0;
     const transcriptsText = JSON.stringify(event_summary.transcripts || []).toLowerCase();
-    const hasDistressText = /help|stop|no|leave|police|save|don't|dont|kill|threat|scream|call/i.test(transcriptsText);
+    // Specific distress phrases only — avoid generic words that appear in all audio
+    const hasDistressText = /\bhelp\b|leave me|police|save me|don't touch|don't hurt|somebody help|i'm being|\battack\b|\bkill\b/i.test(transcriptsText);
 
     let calculatedWeight = 0;
     if (hasDistressText) calculatedWeight += 3;
-    if (bandEnergy >= 0.05) calculatedWeight += 2;
-    if (peakRms >= 0.04) calculatedWeight += 2;
-    if (peakAccel >= 6.0) calculatedWeight += 2;
-    if (voteSum >= 1) calculatedWeight += 2; // Multi-window vote persistence
+    if (bandEnergy >= 0.12) calculatedWeight += 2; // Realistic: scream-level 2-4kHz energy
+    if (peakRms >= 0.12) calculatedWeight += 2;    // Realistic: loud crash/shout on phone mic
+    if (peakAccel >= 8.0) calculatedWeight += 2;   // Realistic: strong physical collision
+    if (voteSum >= 2) calculatedWeight += 2;       // Majority of windows must have threat signal
 
     const totalWeight = Math.min(10, calculatedWeight);
     const isKeepFallback = totalWeight >= 5;
@@ -316,8 +317,9 @@ Respond ONLY in valid JSON matching this exact format:
 
   const textLower = (audioTranscript.transcript || '').toLowerCase();
   const toneLower = (audioTranscript.tone || '').toLowerCase();
-  const isDistressSpeech = /help|stop|no|leave|save|police|scream|shout|don't|dont|kill|threat/i.test(textLower) ||
-                           ['aggressive', 'panic', 'distress'].includes(toneLower);
+  // Specific distress words only — generic words like "no", "stop", "call" excluded to prevent false positives
+  const isDistressSpeech = /\bhelp\b|\bleave me\b|\bpolice\b|\bsave me\b|don't touch|don't hurt|somebody help|i'm being|he's got|she's got|\bkill\b|\battack\b/i.test(textLower) ||
+                           ['panic', 'distress'].includes(toneLower);
 
   const pollPrompt = `
 You are evaluating a 15-second window in Amana's 45-second threat trial.
@@ -335,8 +337,9 @@ Sensor Metadata:
 - Peak Acceleration: ${sensor_summary.accelerometer_peak ?? 0} m/s²
 
 DECISION RULE:
-- VOTE 1 if distress words ("help", "stop", "leave me", shouting) or high scream band (> 0.20) or motion (> 12m/s²) are present.
-- VOTE 0 if audio is at calm ambient baseline.
+- VOTE 1 if clear distress phrases ("help", "leave me", "police") OR tone is panic/distress OR scream band > 0.15 OR motion > 10 m/s².
+- VOTE 0 if audio is at calm ambient baseline, ordinary conversation, or no clear threat signal.
+Be strict. Ambient background noise or music should vote 0.
 
 Respond ONLY in valid JSON:
 {
@@ -350,7 +353,8 @@ Respond ONLY in valid JSON:
   const rms = sensor_summary.audio_features?.peak_rms || 0;
   const band = sensor_summary.audio_features?.band_2k_4k_energy || 0;
   const accel = sensor_summary.accelerometer_peak || 0;
-  const pollVote = (isDistressSpeech || band >= 0.20 || (rms > 0.15 && accel > 8.0) || accel > 12.0) ? 1 : 0;
+  // Fallback vote — only fires on strong acoustic or motion signals (realistic phone-mic thresholds)
+  const pollVote = (isDistressSpeech || band >= 0.15 || accel > 10.0) ? 1 : 0;
 
   if (!apiKey) {
     return res.status(200).json({
@@ -381,7 +385,8 @@ Respond ONLY in valid JSON:
       const text = gData.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) {
         const parsed = JSON.parse(text.trim());
-        const finalVote = isDistressSpeech ? 1 : (parsed.vote ?? pollVote);
+        // Trust Gemma's real vote — no override. If Gemma says 0, it's 0.
+        const finalVote = parsed.vote ?? pollVote;
         return res.status(200).json({
           decision_response: {
             ...parsed,
