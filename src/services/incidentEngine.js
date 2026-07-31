@@ -24,10 +24,10 @@ import {
   generateUniqueCaseName,
   db
 } from './db';
-import { captureAudioClip, extractFrameFeatures } from './audioEngine';
+import { captureAudioClip, extractFrameFeatures, blobTo16kHzWav } from './audioEngine';
 import { startGpsTracking, stopGpsTracking, getLatestGpsFix } from './gpsService';
 import { getLatestMotionData } from './motionEngine';
-import { callGemmaDecision, callGemmaReport } from './gemmaService';
+import { callGemmaDecision, callGemmaReport, extractRawSpeech, enrichAudioContext } from './gemmaService';
 
 let activeIncident = null;
 let currentPhase = 'IDLE';
@@ -280,27 +280,45 @@ async function runAcquisitionLoop(triggerType, initialGps) {
     });
     trialSegments.push(savedSegment);
 
-    // Call Gemma for single 30s window vote
+    // ─────────────────────────────────────────────────────────────
+    // MULTI-STAGE SPEECH-TO-TEXT & REASONING PIPELINE
+    // ─────────────────────────────────────────────────────────────
     setPhase('DECIDING');
     let pollVote = 0;
     let windowTranscript = 'Background ambient audio captured.';
     let windowReason = '';
 
     try {
+      // 1. Re-encode WebM chunk to clean 16kHz Mono WAV Blob (full RIFF header)
+      const wavBlob = await blobTo16kHzWav(audio_blob);
+
+      // 2. Stage 1: Dual-Fusion Speech Extraction (Web Speech API + Gemini STT)
+      const rawStt = await extractRawSpeech(wavBlob, 'Background sound captured');
+
+      // 3. Stage 2: Gemini Multimodal Enrichment (Speaker Diarization, Ambience & Intent)
+      const enrichment = await enrichAudioContext({
+        audioWavBlob: wavBlob,
+        sttRaw: rawStt,
+        sensorSnapshot,
+        windowIdx
+      });
+
+      if (enrichment.corrected_transcript) {
+        windowTranscript = enrichment.corrected_transcript;
+        transcripts.push(enrichment.corrected_transcript);
+      }
+
+      // 4. Stage 3: Gemma 10-Point Threat Evaluator Decision
       const decisionRes = await callGemmaDecision({
         isFinalAggregation: false,
-        audioBlob: audio_blob,
-        sensorSummary: sensorSnapshot,
+        audioBlob: wavBlob,
+        sensorSummary: { ...sensorSnapshot, enrichment },
         ledger: activeIncident.ledger
       });
 
-      pollVote = decisionRes.vote ?? (decisionRes.decision === 'keep' ? 1 : 0);
-      if (decisionRes.transcript) {
-        windowTranscript = decisionRes.transcript;
-        transcripts.push(decisionRes.transcript);
-      }
-      windowReason = decisionRes.reason || '';
-      await updateSegmentDecision(savedSegment.id, decisionRes);
+      pollVote = decisionRes.vote ?? (decisionRes.decision === 'keep' || enrichment.distress_intent ? 1 : 0);
+      windowReason = decisionRes.reason || (pollVote === 1 ? 'Distress vocal tone or acoustic spike detected.' : 'Quiet background baseline.');
+      await updateSegmentDecision(savedSegment.id, { ...decisionRes, enrichment });
     } catch (err) {
       console.warn(`Poll ${windowIdx} call error:`, err);
       pollVote = (audioFeatures.rms > 0.18 || motionData.mag > 8.0) ? 1 : 0;

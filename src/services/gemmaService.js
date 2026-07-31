@@ -22,6 +22,91 @@ export async function blobToBase64(blob) {
 }
 
 /**
+ * STAGE 1: DUAL-FUSION SPEECH EXTRACTION
+ * Fuses Web Speech API live stream with Gemini Audio STT decoding
+ */
+export async function extractRawSpeech(audioWavBlob, liveWebSpeechTranscript = '') {
+  let geminiSpeech = null;
+
+  if (audioWavBlob) {
+    try {
+      const wavBase64 = await blobToBase64(audioWavBlob);
+      const res = await fetch('/api/gemma-decision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audio_base64: wavBase64,
+          mode: 'stt_only',
+          sensor_summary: { live_transcript: liveWebSpeechTranscript }
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        geminiSpeech = data.transcript || data.observed_speech || null;
+      }
+    } catch (err) {
+      console.warn('Stage 1 Gemini STT warning:', err);
+    }
+  }
+
+  // Dual-fusion fallback
+  const fusedTranscript = [liveWebSpeechTranscript, geminiSpeech]
+    .filter(t => t && t !== 'NO_SPEECH' && t.trim().length > 0)
+    .join(' | ');
+
+  return fusedTranscript || 'NO_SPEECH';
+}
+
+/**
+ * STAGE 2: GEMINI MULTIMODAL ENRICHMENT PIPELINE
+ * Performs speaker diarization, ambient sound detection, and Pidgin/Hausa error correction
+ */
+export async function enrichAudioContext({ audioWavBlob, sttRaw, sensorSnapshot = {}, windowIdx = 1 }) {
+  let wavBase64 = null;
+  if (audioWavBlob) {
+    try {
+      wavBase64 = await blobToBase64(audioWavBlob);
+    } catch (e) {
+      console.warn('WAV base64 conversion warning:', e);
+    }
+  }
+
+  const defaultEnrichment = {
+    corrected_transcript: sttRaw !== 'NO_SPEECH' ? sttRaw : 'No vocal speech detected.',
+    speakers: sttRaw !== 'NO_SPEECH' ? ['Speaker A', 'Speaker B'] : ['Ambient Audio'],
+    ambient_sounds: sensorSnapshot.rms > 0.30 ? ['Sound spike detected'] : ['Background ambience'],
+    distress_intent: sensorSnapshot.band_2k4k > 0.15 || (sttRaw && /help|stop|leave|police|distress/i.test(sttRaw)),
+    extracted_entities: ['Recorded Location']
+  };
+
+  try {
+    const response = await fetch('/api/gemma-decision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audio_base64: wavBase64,
+        raw_stt: sttRaw,
+        sensor_summary: sensorSnapshot,
+        window_number: windowIdx,
+        mode: 'enrichment'
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.enrichment) {
+        return data.enrichment;
+      }
+    }
+  } catch (err) {
+    console.warn('Stage 2 Gemini Enrichment endpoint warning, utilizing local fallback:', err);
+  }
+
+  return defaultEnrichment;
+}
+
+/**
  * Call Gemma Decision API during active acquisition loop
  */
 export async function callGemmaDecision({

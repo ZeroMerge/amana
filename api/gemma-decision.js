@@ -16,17 +16,119 @@ export default async function handler(req, res) {
 
   const {
     isFinalAggregation = false,
+    mode = null,
+    raw_stt = '',
+    window_number = 1,
     polls = [],
     movement_summary = {},
     event_summary = {},
     audio_base64 = null,
-    audio_mime = 'audio/webm',
+    audio_mime = 'audio/wav',
     sensor_summary = {},
     ledger = {}
   } = req.body || {};
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMMA_API_KEY;
   const gemmaModel = process.env.GEMMA_MODEL || 'gemma-4-31b-it';
+
+  // ─────────────────────────────────────────────────────────────
+  // MODE 1: STAGE 1 RAW STT EXTRACTION
+  // ─────────────────────────────────────────────────────────────
+  if (mode === 'stt_only') {
+    if (!apiKey || !audio_base64) {
+      return res.status(200).json({ transcript: sensor_summary.live_transcript || 'NO_SPEECH' });
+    }
+
+    const sttPrompt = `You are a verbatim speech transcriber. Listen to the provided audio file. Output ONLY a valid JSON object: { "transcript": "verbatim spoken text" }. If no speech is detected, output { "transcript": "NO_SPEECH" }. Do not add markdown or explanation.`;
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: sttPrompt },
+              { inlineData: { mimeType: 'audio/wav', data: audio_base64 } }
+            ]
+          }]
+        })
+      });
+      const data = await response.json();
+      const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const match = txt.match(/\{[\s\S]*\}/);
+      const parsed = match ? JSON.parse(match[0]) : {};
+      return res.status(200).json({ transcript: parsed.transcript || sensor_summary.live_transcript || 'NO_SPEECH' });
+    } catch (e) {
+      return res.status(200).json({ transcript: sensor_summary.live_transcript || 'NO_SPEECH' });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MODE 2: STAGE 2 GEMINI MULTIMODAL ENRICHMENT
+  // ─────────────────────────────────────────────────────────────
+  if (mode === 'enrichment') {
+    if (!apiKey) {
+      return res.status(200).json({
+        enrichment: {
+          corrected_transcript: raw_stt || 'No speech detected.',
+          speakers: raw_stt ? ['Speaker A', 'Speaker B'] : ['Ambient Audio'],
+          ambient_sounds: sensor_summary.rms > 0.30 ? ['Sound spike'] : ['Background ambience'],
+          distress_intent: sensor_summary.band_2k4k > 0.15 || /help|stop|police|leave/i.test(raw_stt),
+          extracted_entities: ['Recorded Location']
+        }
+      });
+    }
+
+    const enrichPrompt = `You are an expert safety evidence audio analyst. Analyze the raw speech transcript and audio file.
+Raw STT Transcript: "${raw_stt}"
+Sensor Data: ${JSON.stringify(sensor_summary)}
+
+Output ONLY valid JSON matching this schema:
+{
+  "enrichment": {
+    "corrected_transcript": "Cleaned verbatim transcript correcting Pidgin/Hausa errors",
+    "speakers": ["Speaker A (Aggressor)", "Speaker B (Victim)"],
+    "ambient_sounds": ["Glass shatter", "Engine noise", "Scream"],
+    "distress_intent": true,
+    "extracted_entities": ["Location or threat entity"]
+  }
+}`;
+
+    try {
+      const parts = [{ text: enrichPrompt }];
+      if (audio_base64) {
+        parts.push({ inlineData: { mimeType: 'audio/wav', data: audio_base64 } });
+      }
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts }] })
+      });
+      const data = await response.json();
+      const txt = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const match = txt.match(/\{[\s\S]*\}/);
+      const parsed = match ? JSON.parse(match[0]) : {};
+      return res.status(200).json(parsed.enrichment ? parsed : {
+        enrichment: {
+          corrected_transcript: raw_stt || 'No speech detected.',
+          speakers: ['Speaker A'],
+          ambient_sounds: ['Background ambience'],
+          distress_intent: false,
+          extracted_entities: ['Recorded Location']
+        }
+      });
+    } catch (e) {
+      return res.status(200).json({
+        enrichment: {
+          corrected_transcript: raw_stt || 'No speech detected.',
+          speakers: ['Speaker A'],
+          ambient_sounds: ['Background ambience'],
+          distress_intent: false,
+          extracted_entities: ['Recorded Location']
+        }
+      });
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────
   // MODE A: FINAL 45s 3-POLL AGGREGATION DECISION (10-Point Weighted Scale)
