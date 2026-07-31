@@ -148,6 +148,7 @@ export function requestManualStop() {
   if (isLoopRunning) {
     manualStopRequested = true;
     cancelActiveCapture();
+    abortActiveGemmaCalls();
     setPhase('CLOSING');
   }
 }
@@ -538,5 +539,5 @@ export async function stopIncidentCollection() {
     setPhase('IDLE');
     activeIncident = null;
     manualStopRequested = false;
-  }, 2000);
+  }, 300);
 }

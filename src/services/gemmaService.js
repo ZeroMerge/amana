@@ -3,7 +3,14 @@
  * Multimodal & Multi-Recording Context Engine
  */
 
-import { getSegmentsForIncident } from './db';
+let globalGemmaAbortController = null;
+
+export function abortActiveGemmaCalls() {
+  if (globalGemmaAbortController) {
+    try { globalGemmaAbortController.abort(); } catch (e) {}
+    globalGemmaAbortController = null;
+  }
+}
 
 /**
  * Convert Audio or Image Blob to Base64
