@@ -45,27 +45,13 @@ export function HomeView({
           borderRadius: '24px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: enginePhase === 'LONG_TERM' ? '#ccfbf1' : isRecording ? '#fef3c7' : '#dcfce7', borderRadius: '9999px', fontSize: '0.75rem', color: enginePhase === 'LONG_TERM' ? '#0f766e' : isRecording ? '#92400e' : '#166534', fontWeight: 600 }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: enginePhase === 'LONG_TERM' ? '#0d9488' : isRecording ? '#d97706' : '#16a34a' }} />
-            {enginePhase === 'LONG_TERM'
-              ? 'Saving Audio Package'
-              : isRecording
-                ? 'Checking Sound'
-                : 'Listening Quietly'}
-          </div>
-
-          {isRecording && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.65rem', background: 'var(--bg-elevated)', borderRadius: '9999px', fontSize: '0.725rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-              {activeIncident?.trigger_type === 'motion'
-                ? '📱 Accelerometer Jolt'
-                : activeIncident?.trigger_type === 'safety_timer'
-                  ? '⏱️ Safety Timer'
-                  : activeIncident?.trigger_type === 'manual'
-                    ? '🔴 Quick Rec'
-                    : '🔊 Audio Sensor'}
-            </div>
-          )}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.75rem', background: enginePhase === 'LONG_TERM' ? '#ccfbf1' : isRecording ? '#fef3c7' : '#dcfce7', borderRadius: '9999px', fontSize: '0.75rem', color: enginePhase === 'LONG_TERM' ? '#0f766e' : isRecording ? '#92400e' : '#166534', fontWeight: 600, marginBottom: '1rem' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: enginePhase === 'LONG_TERM' ? '#0d9488' : isRecording ? '#d97706' : '#16a34a' }} />
+          {enginePhase === 'LONG_TERM'
+            ? 'Saving Audio Package'
+            : isRecording
+              ? 'Checking Sound'
+              : 'Listening Quietly'}
         </div>
 
         <h1 className="headline-lg" style={{ marginBottom: '0.3rem', fontSize: '1.35rem' }}>
