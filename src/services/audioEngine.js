@@ -409,11 +409,59 @@ export async function captureAudioClip(durationMs = 10000) {
   });
 }
 
+let liveSpeechRecognizer = null;
+let currentLiveTranscript = '';
+
+export function startLiveSpeechRecognition() {
+  if (typeof window === 'undefined') return;
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) return;
+
+  try {
+    liveSpeechRecognizer = new SpeechRec();
+    liveSpeechRecognizer.continuous = true;
+    liveSpeechRecognizer.interimResults = true;
+    liveSpeechRecognizer.lang = 'en-NG';
+
+    liveSpeechRecognizer.onresult = (e) => {
+      let finalStr = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        finalStr += e.results[i][0].transcript;
+      }
+      if (finalStr.trim()) {
+        currentLiveTranscript = finalStr.trim();
+      }
+    };
+
+    liveSpeechRecognizer.onerror = () => {};
+    liveSpeechRecognizer.onend = () => {
+      if (isMonitoring && liveSpeechRecognizer) {
+        try { liveSpeechRecognizer.start(); } catch (e) {}
+      }
+    };
+
+    liveSpeechRecognizer.start();
+  } catch (e) {
+    console.warn('SpeechRecognition init error:', e);
+  }
+}
+
+export function getLiveSpeechTranscript() {
+  const text = currentLiveTranscript;
+  currentLiveTranscript = '';
+  return text;
+}
+
 /**
  * Clean up AudioContext & MediaStream
  */
 export function cleanupAudioEngine() {
   stopAudioMonitoring();
+
+  if (liveSpeechRecognizer) {
+    try { liveSpeechRecognizer.stop(); } catch (e) {}
+    liveSpeechRecognizer = null;
+  }
 
   if (micSource) {
     micSource.disconnect();

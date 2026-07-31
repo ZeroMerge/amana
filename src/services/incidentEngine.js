@@ -24,7 +24,7 @@ import {
   generateUniqueCaseName,
   db
 } from './db';
-import { captureAudioClip, extractFrameFeatures, blobTo16kHzWav } from './audioEngine';
+import { captureAudioClip, extractFrameFeatures, blobTo16kHzWav, getLiveSpeechTranscript } from './audioEngine';
 import { startGpsTracking, stopGpsTracking, getLatestGpsFix } from './gpsService';
 import { getLatestMotionData } from './motionEngine';
 import { callGemmaDecision, callGemmaReport, extractRawSpeech, enrichAudioContext } from './gemmaService';
@@ -293,7 +293,8 @@ async function runAcquisitionLoop(triggerType, initialGps) {
       const wavBlob = await blobTo16kHzWav(audio_blob);
 
       // 2. Stage 1: Dual-Fusion Speech Extraction (Web Speech API + Gemini STT)
-      const rawStt = await extractRawSpeech(wavBlob, 'Background sound captured');
+      const liveSpeech = getLiveSpeechTranscript();
+      const rawStt = await extractRawSpeech(wavBlob, liveSpeech);
 
       // 3. Stage 2: Gemini Multimodal Enrichment (Speaker Diarization, Ambience & Intent)
       const enrichment = await enrichAudioContext({
