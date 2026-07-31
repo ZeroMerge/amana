@@ -439,7 +439,7 @@ export function ChatView({ incidents = [], initialIncidentId = null }) {
       )}
 
       {/* ── 5. EXACT CLAUDE COMPOSER ATTACHMENT SQUARE CARDS (105px x 96px) ── */}
-      <div style={{ flexShrink: 0, paddingTop: '0.25rem', paddingBottom: '0.75rem' }}>
+      <div style={{ flexShrink: 0, paddingTop: '0.25rem', paddingBottom: '0.75rem', position: 'sticky', bottom: '80px', zIndex: 50, background: 'var(--bg-main)' }}>
         <div
           style={{
             background: 'var(--bg-card)',

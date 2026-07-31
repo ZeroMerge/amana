@@ -239,9 +239,9 @@ export function OnboardingView({ onCompleteOnboarding }) {
   };
 
   return (
-    <div style={{ padding: '1rem 0' }}>
+    <div style={{ padding: '0.75rem 0 2rem 0', maxHeight: '100vh', overflowY: 'auto' }}>
       {/* Step Progress Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', marginBottom: '1.25rem' }}>
         {[1, 2, 3, 4].map(s => (
           <div
             key={s}
@@ -258,8 +258,8 @@ export function OnboardingView({ onCompleteOnboarding }) {
 
       {/* STEP 1: BEFORE YOU BEGIN */}
       {step === 1 && (
-        <div className="card-flat" style={{ textAlign: 'center', padding: '2rem 1.25rem', border: 'none' }}>
-          <div style={{ margin: '0 auto 1.5rem', width: '140px', height: '52px', background: 'var(--bg-elevated)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem' }}>
+        <div className="card-flat" style={{ textAlign: 'center', padding: '1.75rem 1.25rem', border: 'none', overflowY: 'auto', maxHeight: 'calc(100vh - 120px)' }}>
+          <div style={{ margin: '0 auto 1.25rem', width: '140px', height: '52px', background: 'var(--bg-elevated)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem' }}>
             <img src="/amana_main_logo.png" alt="Amana" style={{ height: '36px', width: '100%', objectFit: 'contain' }} />
           </div>
 
@@ -267,11 +267,11 @@ export function OnboardingView({ onCompleteOnboarding }) {
             Before You Begin
           </h1>
 
-          <p className="body-sm" style={{ marginBottom: '1.75rem', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+          <p className="body-sm" style={{ marginBottom: '1.5rem', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
             Amana helps record what happens during dangerous moments when you cannot use your phone.
           </p>
 
-          <div style={{ background: 'var(--bg-elevated)', border: 'none', borderRadius: '18px', padding: '1.25rem', textAlign: 'left', fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1.75rem', lineHeight: 1.65 }}>
+          <div style={{ background: 'var(--bg-elevated)', border: 'none', borderRadius: '18px', padding: '1.25rem', textAlign: 'left', fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.65 }}>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
               What to expect
             </div>

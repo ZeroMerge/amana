@@ -626,7 +626,9 @@ export function VaultView({
               {incidents.map((inc, index) => {
                 const permNum = getPermanentRecNumber(inc, index, incidents.length);
                 const dateStr = new Date(inc.started_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const segCount = inc.ledger?.gemma_call_count || '?';
+                const actualDurSec = (inc.ended_at && inc.started_at)
+                  ? Math.max(15, Math.round((inc.ended_at - inc.started_at) / 1000))
+                  : (inc.ledger?.gemma_call_count ? inc.ledger.gemma_call_count * 15 : 45);
 
                 return (
                   <div
@@ -659,7 +661,7 @@ export function VaultView({
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: '0.5rem' }}>
                         <span>{dateStr}</span>
-                        <span>{typeof segCount === 'number' ? `${segCount * 15}s` : '30s'}</span>
+                        <span>{actualDurSec}s</span>
                       </div>
                     </div>
                   </div>
@@ -674,7 +676,9 @@ export function VaultView({
               {incidents.map((inc, index) => {
                 const permNum = getPermanentRecNumber(inc, index, incidents.length);
                 const dateStr = new Date(inc.started_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const segCount = inc.ledger?.gemma_call_count || 2;
+                const actualDurSec = (inc.ended_at && inc.started_at)
+                  ? Math.max(15, Math.round((inc.ended_at - inc.started_at) / 1000))
+                  : (inc.ledger?.gemma_call_count ? inc.ledger.gemma_call_count * 15 : 45);
                 const caseTitle = inc.case_name || generateUniqueCaseName(inc.gps_trail?.[0]?.place, inc.trigger_type, permNum);
 
                 return (
@@ -691,7 +695,7 @@ export function VaultView({
                       • <strong style={{ fontWeight: 600 }}>{caseTitle}</strong>
                     </div>
                     <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                      {dateStr} • {segCount * 15}s
+                      {dateStr} • {actualDurSec}s
                     </div>
                   </div>
                 );
