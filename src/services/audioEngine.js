@@ -36,6 +36,10 @@ export function getCalibrationData() {
   return { ...calibrationData };
 }
 
+export function getAnalyserNode() {
+  return analyserNode;
+}
+
 export function setCalibrationData(data) {
   calibrationData = {
     ...calibrationData,

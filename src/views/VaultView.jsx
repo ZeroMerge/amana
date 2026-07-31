@@ -371,29 +371,17 @@ export function VaultView({
             </button>
           </div>
 
-          {/* Soundwave Scrubber Track */}
-          <div style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '3px', margin: '0.5rem 0' }}>
-            {Array.from({ length: 36 }).map((_, i) => {
-              const isActive = (i / 36) * 100 <= audioProgress;
-              const dynamicHeight = isPlayingAudio && isActive
-                ? Math.floor(Math.sin((i + Date.now() / 120) * 0.4) * 12 + 20)
-                : Math.floor(Math.sin(i * 0.5) * 8 + 10);
-
-              return (
-                <div
-                  key={i}
-                  style={{
-                    flex: 1,
-                    height: `${dynamicHeight}px`,
-                    background: 'var(--text-primary)',
-                    opacity: isActive ? 1 : 0.25,
-                    borderRadius: '3px',
-                    transition: isPlayingAudio ? 'height 0.08s ease' : 'height 0.2s ease'
-                  }}
-                />
-              );
-            })}
-          </div>
+          {/* Real Audio Playback Spectrum Scrubber with Lerp Physics */}
+          <PlaybackAudioWaveform
+            audioRef={audioRef}
+            isPlayingAudio={isPlayingAudio}
+            audioProgress={audioProgress}
+            onSeek={(pct) => {
+              if (audioRef.current && audioRef.current.duration) {
+                audioRef.current.currentTime = pct * audioRef.current.duration;
+              }
+            }}
+          />
         </div>
 
         {/* 2. LOCATION & ROUTE SECTION */}
@@ -712,6 +700,111 @@ export function VaultView({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// REAL-TIME AUDIO PLAYBACK SPECTRUM SCRUBBER WITH LERP PHYSICS
+// ─────────────────────────────────────────────────────────────
+function PlaybackAudioWaveform({ audioRef, isPlayingAudio, audioProgress, onSeek }) {
+  const [barHeights, setBarHeights] = useState(() => Array(36).fill(10));
+  const currentHeightsRef = useRef(Array(36).fill(10));
+  const audioCtxRef = useRef(null);
+  const analyserRef = useRef(null);
+  const sourceRef = useRef(null);
+
+  useEffect(() => {
+    let animId = null;
+    const numBars = 36;
+    const freqBuffer = new Uint8Array(128);
+
+    function updateWaveform() {
+      const audio = audioRef?.current;
+      const targetHeights = [];
+
+      if (isPlayingAudio && audio) {
+        if (!audioCtxRef.current) {
+          try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioCtx();
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 256;
+            const source = ctx.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(ctx.destination);
+
+            audioCtxRef.current = ctx;
+            analyserRef.current = analyser;
+            sourceRef.current = source;
+          } catch (e) {
+            // Audio context already initialized or CORS fallback
+          }
+        }
+
+        if (analyserRef.current) {
+          analyserRef.current.getByteFrequencyData(freqBuffer);
+        }
+
+        for (let i = 0; i < numBars; i++) {
+          const binIdx = Math.floor((i / numBars) * (freqBuffer.length * 0.7));
+          const val = freqBuffer[binIdx] / 255;
+          const h = Math.max(6, Math.floor(val * 28 + Math.sin(i * 0.4 + Date.now() / 150) * 3 + 8));
+          targetHeights.push(h);
+        }
+      } else {
+        // Clean audio profile when paused
+        for (let i = 0; i < numBars; i++) {
+          const h = Math.floor(Math.sin(i * 0.35) * 6 + 10);
+          targetHeights.push(h);
+        }
+      }
+
+      const nextHeights = [];
+      for (let i = 0; i < numBars; i++) {
+        const current = currentHeightsRef.current[i] || 10;
+        const target = targetHeights[i] || 10;
+        const lerped = current + (target - current) * (isPlayingAudio ? 0.28 : 0.15);
+        currentHeightsRef.current[i] = lerped;
+        nextHeights.push(Math.round(lerped));
+      }
+
+      setBarHeights(nextHeights);
+      animId = requestAnimationFrame(updateWaveform);
+    }
+
+    animId = requestAnimationFrame(updateWaveform);
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isPlayingAudio, audioRef]);
+
+  return (
+    <div
+      style={{ height: '40px', display: 'flex', alignItems: 'center', gap: '3px', margin: '0.5rem 0', cursor: 'pointer' }}
+      onClick={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const pct = Math.max(0, Math.min(1, clickX / rect.width));
+        if (onSeek) onSeek(pct);
+      }}
+    >
+      {barHeights.map((h, i) => {
+        const isActive = (i / 36) * 100 <= audioProgress;
+        return (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: `${h}px`,
+              background: 'var(--text-primary)',
+              opacity: isActive ? 1 : 0.25,
+              borderRadius: '3px',
+              transition: isPlayingAudio ? 'height 0.04s linear' : 'height 0.15s ease'
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

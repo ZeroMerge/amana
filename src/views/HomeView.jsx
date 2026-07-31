@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LockClosedIcon,
   ClockIcon,
@@ -8,6 +8,7 @@ import {
 import { useLiveQuery } from 'dexie-react-hooks';
 import { IncidentMap } from '../components/IncidentMap';
 import { getAllAuditLogs } from '../services/db';
+import { getAnalyserNode } from '../services/audioEngine';
 
 export function HomeView({
   incidentCount = 0,
@@ -68,27 +69,8 @@ export function HomeView({
               : 'Amana is listening quietly in the background.'}
         </p>
 
-        {/* Minimal Breathing Sensor Waveform */}
-        <div style={{ height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', margin: '0.5rem 0' }}>
-          {Array.from({ length: 28 }).map((_, i) => {
-            const h = isRecording
-              ? Math.floor(Math.sin(i * 0.5) * 14 + 18)
-              : Math.floor(Math.sin((i + Date.now() / 300) * 0.4) * 5 + 9);
-            return (
-              <div
-                key={i}
-                style={{
-                  width: '3px',
-                  height: `${h}px`,
-                  background: enginePhase === 'LONG_TERM' ? '#0d9488' : isRecording ? '#d97706' : 'var(--text-primary)',
-                  opacity: isRecording ? 1 : 0.4 + (i % 4) * 0.15,
-                  borderRadius: '2px',
-                  transition: 'height 0.15s ease'
-                }}
-              />
-            );
-          })}
-        </div>
+        {/* Real Web Audio API Waveform with Lerp Physics */}
+        <RealAudioWaveform isRecording={isRecording} enginePhase={enginePhase} />
         {/* Stop session — text only, no UI change */}
         {isRecording && onStopRecording && (
           <button
@@ -351,6 +333,77 @@ export function HomeView({
 
       </div>
 
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// REAL-TIME WEB AUDIO API FREQUENCY SPECTRUM WITH LERP PHYSICS
+// ─────────────────────────────────────────────────────────────
+function RealAudioWaveform({ isRecording, enginePhase }) {
+  const [barHeights, setBarHeights] = useState(() => Array(28).fill(4));
+  const currentHeightsRef = useRef(Array(28).fill(4));
+
+  useEffect(() => {
+    let animId = null;
+    const numBars = 28;
+    const freqBuffer = new Uint8Array(128);
+
+    function updateWaveform() {
+      const analyser = getAnalyserNode();
+      if (analyser) {
+        analyser.getByteFrequencyData(freqBuffer);
+      }
+
+      const nextHeights = [];
+      const now = Date.now();
+
+      for (let i = 0; i < numBars; i++) {
+        let targetH = 4;
+        if (analyser) {
+          // Map index across low (bass), mid (vocal), and high (scream) frequency bins
+          const binIdx = Math.floor((i / numBars) * (freqBuffer.length * 0.65));
+          const val = freqBuffer[binIdx] / 255;
+          targetH = Math.max(4, Math.floor(val * 32));
+        } else {
+          // Gentle resting breathing curve if mic analyser is initializing
+          targetH = Math.max(4, Math.floor(Math.sin((i * 0.4) + (now / 350)) * 5 + 8));
+        }
+
+        // Lerp physics: smoothly interpolate current height towards target height
+        const current = currentHeightsRef.current[i] || 4;
+        const lerped = current + (targetH - current) * 0.28;
+        currentHeightsRef.current[i] = lerped;
+        nextHeights.push(Math.round(lerped));
+      }
+
+      setBarHeights(nextHeights);
+      animId = requestAnimationFrame(updateWaveform);
+    }
+
+    animId = requestAnimationFrame(updateWaveform);
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, []);
+
+  const barColor = enginePhase === 'LONG_TERM' ? '#0d9488' : isRecording ? '#d97706' : 'var(--text-primary)';
+
+  return (
+    <div style={{ height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', margin: '0.5rem 0' }}>
+      {barHeights.map((h, i) => (
+        <div
+          key={i}
+          style={{
+            width: '3px',
+            height: `${h}px`,
+            background: barColor,
+            opacity: isRecording ? 1 : 0.4 + (i % 4) * 0.15,
+            borderRadius: '2px',
+            transition: 'height 0.04s linear'
+          }}
+        />
+      ))}
     </div>
   );
 }
