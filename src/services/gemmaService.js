@@ -10,11 +10,15 @@ import { getSegmentsForIncident } from './db';
  */
 export async function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
+    if (!blob) return resolve({ base64: null, mimeType: 'audio/webm' });
     const reader = new FileReader();
     reader.onloadend = () => {
-      const result = reader.result;
-      const base64Data = result.split(',')[1];
-      resolve(base64Data);
+      const result = reader.result || '';
+      const parts = result.split(',');
+      const base64Data = parts[1] || '';
+      const mimeMatch = parts[0]?.match(/:(.*?);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : (blob.type || 'audio/webm');
+      resolve({ base64: base64Data, mimeType });
     };
     reader.onerror = reject;
     reader.readAsDataURL(blob);
@@ -25,17 +29,18 @@ export async function blobToBase64(blob) {
  * STAGE 1: DUAL-FUSION SPEECH EXTRACTION
  * Fuses Web Speech API live stream with Gemini Audio STT decoding
  */
-export async function extractRawSpeech(audioWavBlob, liveWebSpeechTranscript = '') {
+export async function extractRawSpeech(audioBlob, liveWebSpeechTranscript = '') {
   let geminiSpeech = null;
 
-  if (audioWavBlob) {
+  if (audioBlob) {
     try {
-      const wavBase64 = await blobToBase64(audioWavBlob);
+      const { base64, mimeType } = await blobToBase64(audioBlob);
       const res = await fetch('/api/gemma-decision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          audio_base64: wavBase64,
+          audio_base64: base64,
+          audio_mime: mimeType,
           mode: 'stt_only',
           sensor_summary: { live_transcript: liveWebSpeechTranscript }
         })
@@ -44,9 +49,12 @@ export async function extractRawSpeech(audioWavBlob, liveWebSpeechTranscript = '
       if (res.ok) {
         const data = await res.json();
         geminiSpeech = data.transcript || data.observed_speech || null;
+      } else {
+        const errTxt = await res.text().catch(() => '');
+        console.warn(`Stage 1 Gemini STT HTTP ${res.status}:`, errTxt);
       }
     } catch (err) {
-      console.warn('Stage 1 Gemini STT warning:', err);
+      console.warn('Stage 1 Gemini STT error:', err);
     }
   }
 
@@ -62,13 +70,16 @@ export async function extractRawSpeech(audioWavBlob, liveWebSpeechTranscript = '
  * STAGE 2: GEMINI MULTIMODAL ENRICHMENT PIPELINE
  * Performs speaker diarization, ambient sound detection, and Pidgin/Hausa error correction
  */
-export async function enrichAudioContext({ audioWavBlob, sttRaw, sensorSnapshot = {}, windowIdx = 1 }) {
-  let wavBase64 = null;
-  if (audioWavBlob) {
+export async function enrichAudioContext({ audioBlob, sttRaw, sensorSnapshot = {}, windowIdx = 1 }) {
+  let audioBase64 = null;
+  let audioMime = 'audio/webm';
+  if (audioBlob) {
     try {
-      wavBase64 = await blobToBase64(audioWavBlob);
+      const res = await blobToBase64(audioBlob);
+      audioBase64 = res.base64;
+      audioMime = res.mimeType;
     } catch (e) {
-      console.warn('WAV base64 conversion warning:', e);
+      console.warn('Base64 conversion warning:', e);
     }
   }
 
@@ -85,7 +96,8 @@ export async function enrichAudioContext({ audioWavBlob, sttRaw, sensorSnapshot 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        audio_base64: wavBase64,
+        audio_base64: audioBase64,
+        audio_mime: audioMime,
         raw_stt: sttRaw,
         sensor_summary: sensorSnapshot,
         window_number: windowIdx,
@@ -122,9 +134,12 @@ export async function callGemmaDecision({
   event_summary = {}
 }) {
   let audioBase64 = null;
+  let audioMime = 'audio/webm';
   if (audioBlob) {
     try {
-      audioBase64 = await blobToBase64(audioBlob);
+      const res = await blobToBase64(audioBlob);
+      audioBase64 = res.base64;
+      audioMime = res.mimeType;
     } catch (err) {
       console.warn('Failed to convert audio blob to base64:', err);
     }
@@ -133,6 +148,7 @@ export async function callGemmaDecision({
   const payload = {
     // Common fields
     audio_base64: audioBase64,
+    audio_mime: audioMime,
     audio_mime: audioBlob?.type || 'audio/webm',
     sensor_summary: sensorSummary,
     ledger: ledger,
